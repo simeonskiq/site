@@ -1,0 +1,90 @@
+<div class="booking-container">
+  <div class="search-section">
+    <div class="date-selectors">
+      <mat-form-field appearance="fill">
+        <mat-label>Check-in Date</mat-label>
+        <input matInput [matDatepicker]="checkinPicker" [(ngModel)]="checkinDate" 
+               [min]="today" (dateChange)="onCheckinDateChange($event.value)">
+        <mat-datepicker-toggle matSuffix [for]="checkinPicker"></mat-datepicker-toggle>
+        <mat-datepicker #checkinPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-form-field appearance="fill">
+        <mat-label>Check-out Date</mat-label>
+        <input matInput [matDatepicker]="checkoutPicker" [(ngModel)]="checkoutDate"
+               [min]="minCheckoutDate">
+        <mat-datepicker-toggle matSuffix [for]="checkoutPicker"></mat-datepicker-toggle>
+        <mat-datepicker #checkoutPicker></mat-datepicker>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="searchRooms()">Search Rooms</button>
+    </div>
+  </div>
+
+  <div class="rooms-grid" *ngIf="rooms.length > 0">
+    <div class="room-card" *ngFor="let room of rooms">
+      <!-- Regular room image -->
+      <img *ngIf="!room.isCarousel" [src]="room.imageUrl" [alt]="room.title">
+      
+      <!-- Carousel for the apartment -->
+      <div *ngIf="room.isCarousel" class="carousel-container">
+        <button class="nav-button prev" (click)="previousImage(room)">&lt;</button>
+        <div class="image-container">
+          <img [src]="room.imageUrl" [alt]="room.title" class="carousel-image">
+        </div>
+        <button class="nav-button next" (click)="nextImage(room)">&gt;</button>
+      </div>
+      
+      <div class="room-info">
+        <h3>{{room.title}}</h3>
+        <p class="room-type">{{room.type}}</p>
+        <p class="room-description">{{room.description}}</p>
+        <div class="button-group">
+          <button mat-raised-button color="primary" class="reserve-button" (click)="contactAboutRoom(room)">
+            Reserve Room
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="no-rooms" *ngIf="searched && rooms.length === 0">
+    No rooms available for the selected dates.
+  </div>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" *ngIf="showReservationForm && selectedRoom">
+    <div class="modal-content">
+      <div class="reservation-form">
+        <div class="form-header">
+          <h3>Reserve {{selectedRoom.title}}</h3>
+          <button class="close-button" (click)="showReservationForm = false">&times;</button>
+        </div>
+        <div class="form-group">
+          <label for="firstName">First Name:</label>
+          <input type="text" id="firstName" [(ngModel)]="reservationData.name1" class="form-control" required placeholder="Enter first name">
+        </div>
+        <div class="form-group">
+          <label for="lastName">Last Name:</label>
+          <input type="text" id="lastName" [(ngModel)]="reservationData.name2" class="form-control" required placeholder="Enter last name">
+        </div>
+        <div class="form-group">
+          <label for="phone">Phone Number:</label>
+          <input type="tel" id="phone" [(ngModel)]="reservationData.phone" class="form-control" required placeholder="Enter phone number">
+        </div>
+        <div class="form-group">
+          <label for="email">Email Address:</label>
+          <input type="email" id="email" [(ngModel)]="reservationData.email" class="form-control" required placeholder="Enter email address">
+        </div>
+        <div class="booking-summary">
+          <p>Check-in: {{checkinDate | date}}</p>
+          <p>Check-out: {{checkoutDate | date}}</p>
+        </div>
+        <div class="form-buttons">
+          <button (click)="confirmReservation()" class="btn btn-primary">Confirm Reservation</button>
+          <button (click)="showReservationForm = false" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,25 @@
+.about-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+h2 {
+    color: #444;
+    margin-top: 1.5rem;
+}
+
+.content {
+    line-height: 1.6;
+}
+
+p {
+    margin-bottom: 1rem;
+    color: #666;
+} 

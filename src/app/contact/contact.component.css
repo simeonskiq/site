@@ -1,0 +1,78 @@
+.contact-container {
+  padding: 2rem;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%);
+  color: white;
+}
+
+.contact-info {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  margin-bottom: 2rem;
+}
+
+.contact-info h2 {
+  margin: 0 0 1.5rem 0;
+  font-size: 2rem;
+  color: #ffd700;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.info-item mat-icon {
+  color: #ffd700;
+}
+
+.info-item p {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.map-container {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.map-container h3 {
+  margin: 0 0 1rem 0;
+  color: #ffd700;
+}
+
+.map-instruction {
+  margin-bottom: 1rem;
+  color: #cccccc;
+  font-style: italic;
+}
+
+#map {
+  height: 400px;
+  width: 100%;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+}
+
+.coordinates-display {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+.coordinates-display p {
+  margin: 0.5rem 0;
+  color: #cccccc;
+}
+
+.coordinates-display p:first-child {
+  color: #ffd700;
+  margin-bottom: 1rem;
+}

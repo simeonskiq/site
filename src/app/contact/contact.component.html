@@ -1,0 +1,29 @@
+<div class="contact-container">
+  <div class="contact-info">
+    <h2>Contact Us</h2>
+    <div class="info-item">
+      <mat-icon>location_on</mat-icon>
+      <p>{{contactInfo.address}}</p>
+    </div>
+    <div class="info-item">
+      <mat-icon>phone</mat-icon>
+      <p>{{contactInfo.phone}}</p>
+    </div>
+    <div class="info-item">
+      <mat-icon>email</mat-icon>
+      <p>{{contactInfo.email}}</p>
+    </div>
+  </div>
+
+  <div class="map-container">
+    <h3>Our Location</h3>
+    <p class="map-instruction">Drag the marker to set the exact location</p>
+    <div id="map"></div>
+    
+    <div class="coordinates-display">
+      <p>Selected Location:</p>
+      <p>Latitude: {{selectedPosition.lat.toFixed(6)}}</p>
+      <p>Longitude: {{selectedPosition.lng.toFixed(6)}}</p>
+    </div>
+  </div>
+</div>
