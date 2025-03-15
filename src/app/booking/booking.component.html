@@ -1,4 +1,9 @@
 <div class="booking-container">
+  <div class="booking-header">
+    <h1 class="booking-title">{{ translations.title || 'Book an Appointment' }}</h1>
+    <p class="booking-subtitle">{{ translations.subtitle || 'Select your preferred date and time' }}</p>
+  </div>
+
   <div class="search-section">
     <div class="date-selectors">
       <mat-form-field appearance="fill">
@@ -21,28 +26,26 @@
     </div>
   </div>
 
-  <div class="rooms-grid" *ngIf="rooms.length > 0">
-    <div class="room-card" *ngFor="let room of rooms">
-      <!-- Regular room image -->
-      <img *ngIf="!room.isCarousel" [src]="room.imageUrl" [alt]="room.title">
-      
-      <!-- Carousel for the apartment -->
-      <div *ngIf="room.isCarousel" class="carousel-container">
-        <button class="nav-button prev" (click)="previousImage(room)">&lt;</button>
-        <div class="image-container">
-          <img [src]="room.imageUrl" [alt]="room.title" class="carousel-image">
-        </div>
-        <button class="nav-button next" (click)="nextImage(room)">&gt;</button>
+  <div class="room-cards" *ngIf="searched && rooms.length > 0">
+    <div class="room-card" *ngFor="let room of rooms" [class.selected-room]="selectedRoom === room">
+      <div class="room-image">
+        <img [src]="room.image" alt="{{ room.name }}">
       </div>
-      
       <div class="room-info">
-        <h3>{{room.title}}</h3>
-        <p class="room-type">{{room.type}}</p>
-        <p class="room-description">{{room.description}}</p>
-        <div class="button-group">
-          <button mat-raised-button color="primary" class="reserve-button" (click)="contactAboutRoom(room)">
-            Reserve Room
-          </button>
+        <h3>{{ room.name }}</h3>
+        <p class="room-description">{{ room.description }}</p>
+        <div class="room-details">
+          <div class="room-feature"><i class="fas fa-user"></i> {{ room.capacity }} guests</div>
+          <div class="room-feature"><i class="fas fa-bed"></i> {{ room.beds }}</div>
+          <div class="room-feature"><i class="fas fa-bath"></i> {{ room.bathrooms }}</div>
+        </div>
+        <div class="room-price">
+          <span class="price-amount">${{ room.price }}</span>
+          <span class="price-period">per night</span>
+        </div>
+        <div class="room-actions">
+          <button class="btn-reserve" (click)="selectRoom(room)">Reserve</button>
+          <button class="btn-details" (click)="openDetailsDialog(room)">Details</button>
         </div>
       </div>
     </div>
@@ -83,6 +86,35 @@
         <div class="form-buttons">
           <button (click)="confirmReservation()" class="btn btn-primary">Confirm Reservation</button>
           <button (click)="showReservationForm = false" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add details modal -->
+  <div class="modal-overlay" *ngIf="showDetailsModal && selectedRoom">
+    <div class="modal-content details-modal">
+      <div class="reservation-form details-form">
+        <div class="form-header">
+          <h3>{{ selectedRoom.title }}</h3>
+          <button class="close-button" (click)="closeDetailsDialog()">&times;</button>
+        </div>
+        
+        <!-- Image Carousel -->
+        <div class="modal-carousel" *ngIf="hasImages(selectedRoom)">
+          <img [src]="getCurrentImage(selectedRoom)" [alt]="selectedRoom.name">
+          <button class="carousel-nav carousel-prev" (click)="previousImage(selectedRoom)">&lt;</button>
+          <button class="carousel-nav carousel-next" (click)="nextImage(selectedRoom)">&gt;</button>
+          <div class="carousel-counter">
+            {{currentImageIndex + 1}} / {{getImagesLength(selectedRoom)}}
+          </div>
+        </div>
+
+        <div class="details-content">
+          <div [innerHTML]="getRoomDetailedDescription(selectedRoom)"></div>
+        </div>
+        <div class="form-buttons">
+          <button class="btn btn-primary" (click)="closeDetailsDialog()">Close</button>
         </div>
       </div>
     </div>

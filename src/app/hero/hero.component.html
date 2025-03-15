@@ -1,6 +1,99 @@
 <div class="hero-container">
-    <div class="hero-content">
-      <h5>Welcome to Our World</h5>
-      <h1>Discover Amazing Adventures</h1>
+    <div class="content-wrapper">
+        <div class="text-content">
+            <h1>{{ translations.title || 'Welcome to Sunflower Hotel' }}</h1>
+            <p>{{ translations.subtitle || 'Experience luxury and comfort in the heart of the city' }}</p>
+            <div class="button-group">
+                <button (click)="navigateToBooking()" class="cta-button">{{ translations.bookNow || 'Book Now' }}</button>
+                <button (click)="navigateToContact()" class="cta-button">{{ translations.learnMore || 'Learn More' }}</button>
+            </div>
+        </div>
     </div>
-  </div> 
+    <div class="scroll-indicator">
+        <p>Scroll to explore</p>
+        <div class="arrow-down"></div>
+    </div>
+</div>
+
+<!-- Typewriter Effect Section -->
+<div class="typewriter-container">
+  <h2>Experience Our</h2>
+  <div class="typewriter">
+    <span id="typewriter-text"></span><span class="cursor">|</span>
+  </div>
+</div>
+
+<!-- Features Section -->
+<div class="features-section">
+  <div class="feature-card">
+    <div class="feature-icon">
+      <i class="fas fa-utensils"></i>
+    </div>
+    <h3>Gourmet Dining</h3>
+    <p>Indulge in exquisite cuisine prepared by our award-winning chefs using the finest local ingredients.</p>
+  </div>
+  
+  <div class="feature-card">
+    <div class="feature-icon">
+      <i class="fas fa-spa"></i>
+    </div>
+    <h3>Luxury Spa</h3>
+    <p>Rejuvenate your body and mind with our premium spa treatments and wellness facilities.</p>
+  </div>
+  
+  <div class="feature-card">
+    <div class="feature-icon">
+      <i class="fas fa-concierge-bell"></i>
+    </div>
+    <h3>24/7 Concierge</h3>
+    <p>Our dedicated staff is always available to ensure your stay exceeds all expectations.</p>
+  </div>
+</div>
+
+<!-- Room Showcase Section -->
+<div class="room-showcase">
+  <h2>Luxurious Accommodations</h2>
+  <div class="room-cards">
+    <div class="room-card">
+      <div class="room-image deluxe-room"></div>
+      <div class="room-details">
+        <h3>Deluxe Apartment</h3>
+        <p>Spacious comfort with stunning views and modern amenities</p>
+        <ul>
+          <li><i class="fas fa-users"></i> Up to 4 guests</li>
+          <li><i class="fas fa-bed"></i> King-size bed + sofa bed</li>
+          <li><i class="fas fa-bath"></i> Luxury bathroom</li>
+          <li><i class="fas fa-utensils"></i> Fully equipped kitchen</li>
+        </ul>
+        <div class="room-price">
+          <span class="price">$150</span> / night
+        </div>
+        <button (click)="navigateToBooking()" class="room-button">Book Now</button>
+      </div>
+    </div>
+    
+    <div class="room-card">
+      <div class="room-image executive-room"></div>
+      <div class="room-details">
+        <h3>Executive Suite</h3>
+        <p>Premium accommodation with exclusive amenities</p>
+        <ul>
+          <li><i class="fas fa-users"></i> Up to 2 guests</li>
+          <li><i class="fas fa-bed"></i> Queen-size bed</li>
+          <li><i class="fas fa-coffee"></i> Nespresso machine</li>
+          <li><i class="fas fa-concierge-bell"></i> 24/7 room service</li>
+        </ul>
+        <div class="room-price">
+          <span class="price">$120</span> / night
+        </div>
+        <button (click)="navigateToBooking()" class="room-button">Book Now</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Call to Action Section -->
+<div class="cta-section">
+  <h2>Experience Luxury at Sunflower Hotel</h2>
+  <button (click)="navigateToBooking()" class="cta-button">{{ translations.bookNow || 'Book Now' }}</button>
+</div> 

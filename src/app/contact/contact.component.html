@@ -1,27 +1,70 @@
 <div class="contact-container">
-  <div class="contact-info">
-    <h2>Contact Us</h2>
-    <div class="info-item">
-      <mat-icon>location_on</mat-icon>
-      <p>{{contactInfo.address}}</p>
+  <div class="contact-header">
+    <h1 class="contact-title">{{ translations.title || 'Contact Us' }}</h1>
+    <p class="contact-subtitle">{{ translations.subtitle || 'Get in touch with our team' }}</p>
+  </div>
+
+  <div class="contact-content">
+    <div class="contact-form">
+      <form (ngSubmit)="onSubmit()" [formGroup]="contactForm">
+        <div class="form-group">
+          <label for="name">{{ translations.name || 'Name' }}</label>
+          <input type="text" id="name" formControlName="name" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="email">{{ translations.email || 'Email' }}</label>
+          <input type="email" id="email" formControlName="email" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="phone">{{ translations.phone || 'Phone' }}</label>
+          <input type="tel" id="phone" formControlName="phone" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="message">{{ translations.message || 'Message' }}</label>
+          <textarea id="message" formControlName="message" class="form-control" rows="5"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" [disabled]="contactForm.invalid">
+          {{ translations.submit || 'Submit' }}
+        </button>
+      </form>
+
+      <div *ngIf="successMessage" class="alert alert-success">
+        {{ translations.successMessage || 'Your message has been sent successfully!' }}
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger">
+        {{ translations.errorMessage || 'There was an error sending your message. Please try again.' }}
+      </div>
     </div>
-    <div class="info-item">
-      <mat-icon>phone</mat-icon>
-      <p>{{contactInfo.phone}}</p>
-    </div>
-    <div class="info-item">
-      <mat-icon>email</mat-icon>
-      <p>{{contactInfo.email}}</p>
+
+    <div class="contact-info">
+      <div class="info-item">
+        <h3>{{ translations.address || 'Address' }}</h3>
+        <p>{{ translations.addressContent || '123 Main Street, City, Country' }}</p>
+      </div>
+
+      <div class="info-item">
+        <h3>{{ translations.phoneLabel || 'Phone' }}</h3>
+        <p>{{ translations.phoneContent || '+1 234 567 890' }}</p>
+      </div>
+
+      <div class="info-item">
+        <h3>{{ translations.emailLabel || 'Email' }}</h3>
+        <p>{{ translations.emailContent || 'info@example.com' }}</p>
+      </div>
     </div>
   </div>
 
   <div class="map-container">
-    <h3>Our Location</h3>
-    <p class="map-instruction">Drag the marker to set the exact location</p>
+    <h3>{{ translations.mapTitle || 'Find Us on the Map' }}</h3>
+    <p class="map-instruction">{{ translations.mapInstruction || 'Drag the marker to pinpoint your location' }}</p>
     <div id="map"></div>
-    
     <div class="coordinates-display">
-      <p>Selected Location:</p>
+      <p>{{ translations.coordinatesTitle || 'Selected Location Coordinates:' }}</p>
       <p>Latitude: {{selectedPosition.lat.toFixed(6)}}</p>
       <p>Longitude: {{selectedPosition.lng.toFixed(6)}}</p>
     </div>

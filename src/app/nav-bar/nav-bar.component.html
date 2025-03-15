@@ -1,11 +1,19 @@
-<nav class="navbar">
-  <div class="logo">
-    <a routerLink="/">Hotel Name</a>
-  </div>
-  <div class="nav-links">
-    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Home</a>
-    <a routerLink="/about" routerLinkActive="active">About</a>
-    <a routerLink="/booking" routerLinkActive="active">Booking</a>
-    <a routerLink="/contact" routerLinkActive="active">Contact</a>
+<nav class="navbar" [class.hidden]="!isNavbarVisible">
+  <div class="navbar-content">
+    <div class="logo">
+      <a routerLink="/">{{ 'hotel.name' | translate }}</a>
+    </div>
+    <div class="nav-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">{{ 'nav.home' | translate }}</a>
+      <a routerLink="/about" routerLinkActive="active">{{ 'nav.about' | translate }}</a>
+      <a routerLink="/booking" routerLinkActive="active">{{ 'nav.booking' | translate }}</a>
+      <a routerLink="/contact" routerLinkActive="active">{{ 'nav.contact' | translate }}</a>
+    </div>
+    <div class="language-selector">
+      <select (change)="changeLanguage($event)">
+        <option value="en" [selected]="currentLang === 'en'">🇬🇧 English</option>
+        <option value="bg" [selected]="currentLang === 'bg'">🇧🇬 Български</option>
+      </select>
+    </div>
   </div>
 </nav>
