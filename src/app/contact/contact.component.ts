@@ -106,6 +106,10 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (this.isBrowser) {
+      this.loadFontAwesome();
+    }
+    
     this.initForm();
     
     if (this.isBrowser) {
@@ -233,7 +237,7 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
     this.contactForm = this.formBuilder.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      subject: ['', [Validators.required, Validators.minLength(5)]],
+      phone: ['', [Validators.required]],
       message: ['', [Validators.required, Validators.minLength(10)]]
     });
   }
@@ -347,6 +351,13 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private capitalizeFirstLetter(string: string): string {
     return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+
+  private loadFontAwesome() {
+    const script = document.createElement('script');
+    script.src = 'https://kit.fontawesome.com/your-kit-code.js';  // Replace with your Font Awesome kit code
+    script.crossOrigin = 'anonymous';
+    document.head.appendChild(script);
   }
 
   ngOnDestroy(): void {

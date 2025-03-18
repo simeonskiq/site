@@ -1,28 +1,31 @@
 <div class="booking-container">
-  <div class="booking-header">
-    <h1 class="booking-title">{{ translations.title || 'Book an Appointment' }}</h1>
-    <p class="booking-subtitle">{{ translations.subtitle || 'Select your preferred date and time' }}</p>
-  </div>
-
-  <div class="search-section">
-    <div class="date-selectors">
+  <div class="booking-header-section">
+    <div class="booking-text">
+      <h1 class="booking-title">MAKE YOUR RESERVATION</h1>
+      <p class="booking-subtitle">Lorem ipsum dolor sit amet consectetur adipisicing elit. Animi facere, soluta magnam consectetur molestias itaque ad sint fugit architecto incidunt.</p>
+    </div>
+    
+    <div class="search-section">
       <mat-form-field appearance="fill">
-        <mat-label>Check-in Date</mat-label>
+        <mat-label>Check In</mat-label>
         <input matInput [matDatepicker]="checkinPicker" [(ngModel)]="checkinDate" 
-               [min]="today" (dateChange)="onCheckinDateChange($event.value)">
+               [min]="today"
+               (dateChange)="onCheckinDateChange($event.value)">
         <mat-datepicker-toggle matSuffix [for]="checkinPicker"></mat-datepicker-toggle>
         <mat-datepicker #checkinPicker></mat-datepicker>
       </mat-form-field>
 
       <mat-form-field appearance="fill">
-        <mat-label>Check-out Date</mat-label>
+        <mat-label>Check Out</mat-label>
         <input matInput [matDatepicker]="checkoutPicker" [(ngModel)]="checkoutDate"
                [min]="minCheckoutDate">
         <mat-datepicker-toggle matSuffix [for]="checkoutPicker"></mat-datepicker-toggle>
         <mat-datepicker #checkoutPicker></mat-datepicker>
       </mat-form-field>
 
-      <button mat-raised-button color="primary" (click)="searchRooms()">Search Rooms</button>
+      <button class="search-button" (click)="searchRooms()">
+        Check availability
+      </button>
     </div>
   </div>
 

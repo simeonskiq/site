@@ -1,25 +1,153 @@
 .booking-container {
-  padding: 2rem;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 100%);
+  background-image: url('../../images/studio/IMG_3730.JPEG'); 
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  padding: 2rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+
+.booking-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1;
+}
+
+.booking-header-section {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  justify-content: space-around;
+  margin-bottom: 2rem;
+  z-index: 2;
+  margin-top: 14em;
+}
+
+.booking-text {
+  flex: 1;
+  max-width: 50%;
+}
+
+.booking-title {
+  position: static;
+  font-size: 3.5rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
   color: white;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.booking-subtitle {
+  position: static;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.2rem;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .search-section {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 2.5rem;
-  border-radius: 15px;
-  backdrop-filter: blur(10px);
-  margin-bottom: 3rem;
-  margin-top: 3em;
-  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  animation: fadeIn 0.5s ease-out;
+  background: white;
+  padding: 2rem;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+/* Form Fields Styling */
+.mat-form-field {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+::ng-deep .mat-form-field-appearance-fill .mat-form-field-flex {
+  background-color: white !important;
+  padding: 0.75em 0.75em 0 0.75em !important;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px !important;
+}
+
+::ng-deep .mat-form-field-label {
+  color: #666 !important;
+}
+
+::ng-deep .mat-input-element {
+  color: #333 !important;
+}
+
+::ng-deep .mat-datepicker-toggle {
+  color: #666 !important;
+}
+
+/* Room Selection */
+.rooms-section {
+  display: none;
+}
+
+/* Search Button */
+.search-button {
+  width: 100%;
+  padding: 1rem;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 1rem;
+}
+
+.search-button:hover {
+  background: #1565c0;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .room-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .booking-header-section {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .booking-text {
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .search-section {
+    margin: 0;
+  }
+
+  .room-cards {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .booking-title {
+    font-size: 2.5rem;
+  }
 }
 
 .date-selectors {
   display: flex;
-  gap: 1.5rem;
+  gap: 2rem;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
@@ -34,17 +162,23 @@
 
 .room-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
-  margin-top: 30px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  padding: 2rem;
+  margin-top: 2rem;
+  z-index: 2;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .room-card {
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -54,13 +188,12 @@
 }
 
 .room-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
 }
 
 .room-image {
-  height: 180px;
-  overflow: hidden;
+  height: 220px;
   position: relative;
 }
 
@@ -70,8 +203,8 @@
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 50px;
-  background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);
+  height: 80px;
+  background: linear-gradient(to top, rgba(0,0,0,0.5), transparent);
 }
 
 .room-image img {
@@ -86,7 +219,7 @@
 }
 
 .room-info {
-  padding: 18px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   flex-grow: 1;
@@ -94,10 +227,10 @@
 }
 
 .room-info h3 {
-  margin: 0 0 10px;
-  color: #2c3e50;
-  font-size: 1.3rem;
-  font-weight: 600;
+  font-size: 1.5rem;
+  margin: 0 0 12px;
+  color: #1a1a1a;
+  font-weight: 700;
 }
 
 .room-description {
@@ -122,18 +255,16 @@
 }
 
 .room-feature {
-  display: flex;
-  align-items: center;
-  color: #555;
-  font-size: 0.8rem;
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 4px 10px;
-  border-radius: 15px;
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #2c3e50;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 500;
 }
 
 .room-feature i {
-  margin-right: 8px;
   color: #3498db;
+  margin-right: 6px;
 }
 
 .room-price {
@@ -187,15 +318,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Material Design Overrides */
-::ng-deep .mat-form-field {
-  width: 200px;
+/* Enhanced Material Design Overrides */
+::ng-deep .mat-form-field-appearance-fill .mat-form-field-flex {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px !important;
+  padding: 0.75em 1em 0 1em !important;
+  transition: background 0.3s ease;
 }
 
-::ng-deep .mat-form-field-appearance-fill .mat-form-field-flex {
+::ng-deep .mat-form-field-appearance-fill:hover .mat-form-field-flex {
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 8px !important;
-  padding: 0.75em 0.75em 0 0.75em !important;
 }
 
 ::ng-deep .mat-form-field-label {
@@ -221,14 +353,13 @@
 }
 
 ::ng-deep .mat-raised-button.mat-primary {
-  background-color: #3498db !important;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+  padding: 0.75rem 2.5rem !important;
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: 1px !important;
+  text-transform: uppercase;
   box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4) !important;
-}
-
-::ng-deep .mat-raised-button.mat-primary:hover {
-  background-color: #2980b9 !important;
-  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.6) !important;
-  transform: translateY(-2px) !important;
 }
 
 .room-actions {
@@ -238,26 +369,22 @@
 }
 
 .btn-reserve, .btn-details {
-  padding: 8px 15px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  padding: 10px 20px;
+  border-radius: 8px;
   font-weight: 600;
-  font-size: 0.85rem;
-  transition: all 0.3s ease;
-  flex: 1;
+  font-size: 0.9rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
 }
 
 .btn-reserve {
-  background-color: #3498db;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
   color: white;
   box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
 }
 
 .btn-details {
-  background-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.05);
   color: #2c3e50;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
@@ -539,4 +666,27 @@
   font-size: 14px;
   font-weight: 500;
   letter-spacing: 1px;
+}
+
+.booking-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-top: 2rem;
+}
+
+.booking-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.booking-subtitle {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 300;
+  margin-top: 0;
 }

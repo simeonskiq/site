@@ -70,7 +70,6 @@ export class BookingComponent implements OnInit, OnDestroy {
   };
   startDate: Date | null = null;
   endDate: Date | null = null;
-  numberOfPeople: number = 1;
   showModal: boolean = false;
   showDetailsModal: boolean = false;
 
@@ -236,11 +235,14 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   onCheckinDateChange(event: any) {
     if (event) {
+      // Create a new date object for the minimum checkout date
+      // Set it to the day after check-in
       const nextDay = new Date(event);
       nextDay.setDate(nextDay.getDate() + 1);
       this.minCheckoutDate = nextDay;
 
-      if (this.checkoutDate && this.checkoutDate < nextDay) {
+      // If current checkout date is before the new minimum, reset it
+      if (this.checkoutDate && this.checkoutDate <= this.checkinDate!) {
         this.checkoutDate = null;
       }
     }
@@ -252,8 +254,10 @@ export class BookingComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Add additional validation to ensure checkout is after checkin
     if (this.checkoutDate <= this.checkinDate) {
-      alert('Check-out date must be after check-in date');
+      alert('Check-out date must be at least one day after check-in date');
+      this.checkoutDate = null;
       return;
     }
 
@@ -350,7 +354,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   confirmReservation() {
-    if (!this.reservationData.name1 || !this.reservationData.name2 || !this.reservationData.phone) {
+    if (!this.reservationData.name1 || !this.reservationData.name2 || !this.reservationData.phone || !this.reservationData.email) {
       alert('Please fill in all required fields');
       return;
     }
@@ -360,33 +364,75 @@ export class BookingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Prepare email data with complete booking information
-    const emailData = {
-      customerEmail: this.reservationData.email,
-      adminEmail: 'simeon226@abv.bg', // Replace with actual admin email
-      reservation: {
-        ...this.reservationData,
-        checkinDate: this.checkinDate,
-        checkoutDate: this.checkoutDate,
-        room: {
-          title: this.selectedRoom.name,
-          type: 'Room',
-          description: this.selectedRoom.description
+    // Format the room description for email - updated formatting logic
+    const formattedDescription = this.getRoomDetailedDescription(this.selectedRoom)
+      .split('<br><br>')
+      .map(section => {
+        if (section.includes('✔')) {
+          // Handle the features list
+          return section
+            .split('<br>')
+            .filter(line => line.trim())
+            .map(line => line.replace('✔ ', ''))
+            .join('<br>');
         }
-      }
+        // Handle the main description
+        return `<p>${section.trim()}</p>`;
+      })
+      .join('');
+
+    // Common parameters for both emails
+    const commonParams = {
+      guest_name: `${this.reservationData.name1} ${this.reservationData.name2}`,
+      guest_phone: this.reservationData.phone,
+      guest_email: this.reservationData.email,
+      check_in: this.checkinDate?.toLocaleDateString(),
+      check_out: this.checkoutDate?.toLocaleDateString(),
+      room_name: this.selectedRoom.name,
+      room_price: this.selectedRoom.price,
+      reservation_date: new Date().toLocaleString()
     };
 
-    // Send emails through your backend API
-    this.http.post('/api/send-reservation-emails', emailData).subscribe({
-      next: (response) => {
-        alert('Reservation confirmed! Check your email for details.');
-        this.showReservationForm = false;
-        this.resetReservationForm();
-      },
-      error: (error) => {
-        console.error('Error sending reservation emails:', error);
-        alert('There was an error processing your reservation. Please try again.');
-      }
+    // Send email using EmailJS
+    if (!(window as any).emailjs) {
+      console.error('EmailJS not loaded');
+      alert('There was an error processing your reservation. Please try again.');
+      return;
+    }
+
+    // Send emails
+    Promise.all([
+      // Send confirmation to guest
+      (window as any).emailjs.send(
+        'service_2sirswb',
+        'template_nj1goue',
+        {
+          ...commonParams,
+          to_email: this.reservationData.email,
+          room_description: formattedDescription
+        },
+        'PStyZFWlBKGj7ZBI8'
+      ),
+      // Send notification to hotel
+      (window as any).emailjs.send(
+        'service_2sirswb',
+        'template_j9ekjdl',
+        {
+          ...commonParams,
+          to_email: 'sunflowerhotelvarna@gmail.com' // Hotel's email
+        },
+        'PStyZFWlBKGj7ZBI8'
+      )
+    ])
+    .then((responses) => {
+      console.log('Emails sent successfully', responses);
+      alert('Reservation confirmed! Please check your email for confirmation details.');
+      this.showReservationForm = false;
+      this.resetReservationForm();
+    })
+    .catch((error) => {
+      console.error('Error sending emails:', error);
+      alert('There was an error processing your reservation. Please try again.');
     });
   }
 
