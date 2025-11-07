@@ -54,8 +54,7 @@ export class NavBarComponent implements OnInit, OnDestroy {
     this.lastScrollPosition = currentScrollPosition;
   }
 
-  changeLanguage(event: any): void {
-    const selectedLang = event.target.value as 'bg' | 'en';
-    this.languageService.setLanguage(selectedLang);
+  changeLanguage(lang: 'bg' | 'en'): void {
+    this.languageService.setLanguage(lang);
   }
 }

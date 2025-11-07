@@ -10,5 +10,5 @@ import { NavBarComponent } from './nav-bar/nav-bar.component';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-  title = 'site';
+  title = 'Aurora Hotel';
 }

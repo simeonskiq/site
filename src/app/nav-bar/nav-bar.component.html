@@ -1,7 +1,9 @@
 <nav class="navbar" [class.hidden]="!isNavbarVisible">
   <div class="navbar-content">
     <div class="logo">
-      <a routerLink="/">{{ 'hotel.name' | translate }}</a>
+      <a routerLink="/">
+        <img src="/images/hotel-logo.png" alt="Aurora Hotel" class="logo-image">
+      </a>
     </div>
     <div class="nav-links">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">{{ 'nav.home' | translate }}</a>
@@ -10,10 +12,24 @@
       <a routerLink="/contact" routerLinkActive="active">{{ 'nav.contact' | translate }}</a>
     </div>
     <div class="language-selector">
-      <select (change)="changeLanguage($event)">
-        <option value="en" [selected]="currentLang === 'en'">🇬🇧 English</option>
-        <option value="bg" [selected]="currentLang === 'bg'">🇧🇬 Български</option>
-      </select>
+      <div class="language-options">
+        <button 
+          class="lang-btn" 
+          [class.active]="currentLang === 'en'"
+          (click)="changeLanguage('en')"
+          type="button">
+          <img src="/images/flags/en-flag.png" alt="English" class="flag-image">
+          <span class="lang-code">EN</span>
+        </button>
+        <button 
+          class="lang-btn" 
+          [class.active]="currentLang === 'bg'"
+          (click)="changeLanguage('bg')"
+          type="button">
+          <img src="/images/flags/bg-flag.png" alt="Bulgarian" class="flag-image">
+          <span class="lang-code">BG</span>
+        </button>
+      </div>
     </div>
   </div>
 </nav>

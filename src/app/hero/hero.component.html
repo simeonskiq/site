@@ -1,7 +1,7 @@
 <div class="hero-container">
     <div class="content-wrapper">
         <div class="text-content">
-            <h1>{{ translations.title || 'Welcome to Sunflower Hotel' }}</h1>
+            <h1>{{ translations.title || 'Welcome to Aurora' }}</h1>
             <p>{{ translations.subtitle || 'Experience luxury and comfort in the heart of the city' }}</p>
             <div class="button-group">
                 <button (click)="navigateToBooking()" class="cta-button">{{ translations.bookNow || 'Book Now' }}</button>
@@ -94,6 +94,15 @@
 
 <!-- Call to Action Section -->
 <div class="cta-section">
-  <h2>Experience Luxury at Sunflower Hotel</h2>
+  <h2>Experience Luxury at Aurora</h2>
   <button (click)="navigateToBooking()" class="cta-button">{{ translations.bookNow || 'Book Now' }}</button>
-</div> 
+</div>
+
+<!-- Scroll to Top Button -->
+<button 
+  *ngIf="showScrollToTop" 
+  (click)="scrollToTop()" 
+  class="scroll-to-top"
+  aria-label="Scroll to top">
+  <i class="fas fa-arrow-up"></i>
+</button> 

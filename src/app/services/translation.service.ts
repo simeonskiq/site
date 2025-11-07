@@ -27,8 +27,8 @@ export class TranslationService {
     
     // Add more translations as needed
     'hotel.name': {
-      en: 'Hotel Name',
-      bg: 'Име на хотела'
+      en: 'Aurora',
+      bg: 'Аврора'
     }
   };
 

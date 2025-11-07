@@ -1,13 +1,13 @@
 import { Component, OnInit, AfterViewInit, HostListener, PLATFORM_ID, Inject, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { TranslationService } from '../services/translation.service';
 import { LanguageService } from '../services/language.service';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-hero',
-  imports: [],
+  imports: [CommonModule],
   templateUrl: './hero.component.html',
   styleUrl: './hero.component.css'
 })
@@ -20,15 +20,15 @@ export class HeroComponent implements OnInit, AfterViewInit, OnDestroy {
   // Bulgarian translations for the hero component
   private translationKeys = {
     en: {
-      title: 'Welcome to Our Website',
-      subtitle: 'Discover the best services for your needs',
+      title: 'Welcome to Aurora',
+      subtitle: 'Experience luxury and comfort in the heart of the city',
       bookNow: 'Book Now',
       learnMore: 'Learn More',
       // Add all other English texts from your component here
     },
     bg: {
-      title: 'Добре дошли в нашия уебсайт',
-      subtitle: 'Открийте най-добрите услуги за вашите нужди',
+      title: 'Добре дошли в Аврора',
+      subtitle: 'Изживейте луксоз и комфорт в сърцето на града',
       bookNow: 'Резервирайте сега',
       learnMore: 'Научете повече',
       // Add all Bulgarian translations here
@@ -57,6 +57,7 @@ export class HeroComponent implements OnInit, AfterViewInit, OnDestroy {
   private isDeleting: boolean = false;
   private typingSpeed: number = 100;
   private scrollIndicatorVisible: boolean = true;
+  showScrollToTop: boolean = false;
 
   @HostListener('window:scroll', [])
   onWindowScroll() {
@@ -75,6 +76,9 @@ export class HeroComponent implements OnInit, AfterViewInit, OnDestroy {
         scrollIndicator.classList.remove('hidden');
       }
     }
+
+    // Show/hide scroll to top button
+    this.showScrollToTop = scrollPosition > 300;
   }
 
   ngOnInit(): void {
@@ -146,6 +150,15 @@ export class HeroComponent implements OnInit, AfterViewInit, OnDestroy {
 
   navigateToContact() {
     this.router.navigate(['/contact']);
+  }
+
+  scrollToTop(): void {
+    if (this.isBrowser) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
   }
 
   ngOnDestroy(): void {
