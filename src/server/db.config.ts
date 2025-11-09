@@ -1,21 +1,22 @@
-import sql from 'mssql/msnodesqlv8';
+import sql from 'mssql';
 
+// Updated configuration for cross-platform
 export const dbConfig: sql.config = {
-  server: 'localhost',
+  server: 'localhost', // or your SQL Server host
   database: 'AuroraHotel',
-  driver: 'msnodesqlv8',
+  user: 'HotelAdmin', // Required for tedious driver
+  password: '123', // Required for tedious driver
+  port: 1433,
   options: {
-    trustedConnection: true,
-    instanceName: 'SQLEXPRESS',
-    trustServerCertificate: true,
+    encrypt: true,               // for Azure SQL; set false if local
+    trustServerCertificate: true, // for local/self-signed certs
     enableArithAbort: true,
-    port: 1433
   },
   pool: {
     max: 10,
     min: 0,
-    idleTimeoutMillis: 30000
-  }
+    idleTimeoutMillis: 30000,
+  },
 };
 
 let pool: sql.ConnectionPool | null = null;
@@ -26,11 +27,10 @@ export async function getDbConnection(): Promise<sql.ConnectionPool> {
       console.log('Attempting to connect to database...');
       console.log('Server:', dbConfig.server);
       console.log('Database:', dbConfig.database);
-      console.log('Instance Name:', dbConfig.options?.instanceName);
 
-      console.log('Attempting MSSQL connection...');
       pool = await sql.connect(dbConfig);
       console.log('✓ Connected to MSSQL database');
+
       await createUsersTable(pool);
     } catch (error: any) {
       console.error('✗ Database connection failed:', error);
