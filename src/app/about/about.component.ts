@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, HostListener } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { TranslationService } from '../services/translation.service';
 import { LanguageService } from '../services/language.service';
@@ -15,6 +15,8 @@ export class AboutComponent implements OnInit, OnDestroy {
   translations: any = {};
   private langSubscription: Subscription = new Subscription();
   currentLanguage: string = 'en';
+  showScrollToTop: boolean = false;
+  private isBrowser: boolean;
 
   // Bulgarian translations for the about component
   private translationKeys = {
@@ -46,7 +48,26 @@ export class AboutComponent implements OnInit, OnDestroy {
     @Inject(PLATFORM_ID) private platformId: Object,
     private translationService: TranslationService,
     private languageService: LanguageService
-  ) { }
+  ) {
+    this.isBrowser = isPlatformBrowser(this.platformId);
+  }
+
+  @HostListener('window:scroll', [])
+  onWindowScroll() {
+    if (this.isBrowser) {
+      const scrollPosition = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      this.showScrollToTop = scrollPosition > 300;
+    }
+  }
+
+  scrollToTop(): void {
+    if (this.isBrowser) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  }
 
   ngOnInit(): void {
     // Register translations with the translation service

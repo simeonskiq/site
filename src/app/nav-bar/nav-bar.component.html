@@ -11,6 +11,16 @@
       <a routerLink="/booking" routerLinkActive="active">{{ 'nav.booking' | translate }}</a>
       <a routerLink="/contact" routerLinkActive="active">{{ 'nav.contact' | translate }}</a>
     </div>
+    <div class="auth-links">
+      <ng-container *ngIf="!isAuthenticated">
+        <a routerLink="/login" routerLinkActive="active" class="auth-link">Sign In</a>
+        <a routerLink="/register" routerLinkActive="active" class="auth-link auth-link-primary">Register</a>
+      </ng-container>
+      <ng-container *ngIf="isAuthenticated">
+        <span class="user-info">{{ currentUser?.firstName || currentUser?.email }}</span>
+        <button (click)="logout()" class="auth-link auth-link-logout">Logout</button>
+      </ng-container>
+    </div>
     <div class="language-selector">
       <div class="language-options">
         <button 

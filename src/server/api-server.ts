@@ -1,26 +1,26 @@
-import {
-  AngularNodeAppEngine,
-  createNodeRequestHandler,
-  isMainModule,
-  writeResponseToNodeResponse,
-} from '@angular/ssr/node';
 import express from 'express';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import sql from 'mssql';
-import { getDbConnection } from './server/db.config.js';
+import { getDbConnection } from './db.config';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-const serverDistFolder = dirname(fileURLToPath(import.meta.url));
-const browserDistFolder = resolve(serverDistFolder, '../browser');
-
 const app = express();
-const angularApp = new AngularNodeAppEngine();
 
 // Middleware for parsing JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// CORS middleware for development
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // JWT secret key (in production, use environment variable)
 const JWT_SECRET = process.env['JWT_SECRET'] || 'your-secret-key-change-in-production';
@@ -43,7 +43,16 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    const pool = await getDbConnection();
+    let pool;
+    try {
+      pool = await getDbConnection();
+    } catch (dbError: any) {
+      console.error('Database connection failed:', dbError);
+      return res.status(500).json({ 
+        error: 'Database connection failed. Please check your database configuration and ensure SQL Server is running.',
+        details: process.env['NODE_ENV'] === 'development' ? dbError.message : undefined
+      });
+    }
 
     // Check if user already exists
     const checkUserQuery = `SELECT Id FROM [dbo].[Users] WHERE Email = @email`;
@@ -96,7 +105,29 @@ app.post('/api/auth/register', async (req, res) => {
     return;
   } catch (error: any) {
     console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
+    console.error('Error stack:', error.stack);
+    
+    // Provide more helpful error messages
+    let errorMessage = 'Internal server error';
+    if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    // Check for specific database errors
+    if (error.code === 'ELOGIN' || error.message?.includes('Login failed')) {
+      errorMessage = 'Database authentication failed. Please check your database credentials.';
+    } else if (error.code === 'ETIMEOUT' || error.message?.includes('timeout')) {
+      errorMessage = 'Database connection timeout. Please check if SQL Server is running.';
+    } else if (error.message?.includes('Cannot open database')) {
+      errorMessage = 'Database does not exist. Please create the database first.';
+    } else if (error.message?.includes('ENOTFOUND') || error.message?.includes('getaddrinfo')) {
+      errorMessage = 'Cannot connect to database server. Please check the server name and ensure SQL Server is running.';
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      details: process.env['NODE_ENV'] === 'development' ? error.message : undefined
+    });
     return;
   }
 });
@@ -111,7 +142,16 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const pool = await getDbConnection();
+    let pool;
+    try {
+      pool = await getDbConnection();
+    } catch (dbError: any) {
+      console.error('Database connection failed:', dbError);
+      return res.status(500).json({ 
+        error: 'Database connection failed. Please check your database configuration and ensure SQL Server is running.',
+        details: process.env['NODE_ENV'] === 'development' ? dbError.message : undefined
+      });
+    }
 
     // Find user by email
     const findUserQuery = `
@@ -163,42 +203,14 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-/**
- * Serve static files from /browser
- */
-app.use(
-  express.static(browserDistFolder, {
-    maxAge: '1y',
-    index: false,
-    redirect: false,
-  }),
-);
-
-/**
- * Handle all other requests by rendering the Angular application.
- * This should be last to catch all non-API routes.
- */
-app.use('/**', (req, res, next) => {
-  angularApp
-    .handle(req)
-    .then((response) =>
-      response ? writeResponseToNodeResponse(response, res) : next(),
-    )
-    .catch(next);
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'API server is running' });
 });
 
-/**
- * Start the server if this module is the main entry point.
- * The server listens on the port defined by the `PORT` environment variable, or defaults to 4000.
- */
-if (isMainModule(import.meta.url)) {
-  const port = process.env['PORT'] || 4000;
-  app.listen(port, () => {
-    console.log(`Node Express server listening on http://localhost:${port}`);
-  });
-}
 
-/**
- * Request handler used by the Angular CLI (for dev-server and during build) or Firebase Cloud Functions.
- */
-export const reqHandler = createNodeRequestHandler(app);
+const port = process.env['API_PORT'] || process.env['PORT'] || 4001;
+const server = app.listen(port, () => {
+  console.log(`API server listening on http://localhost:${port}`);
+});
+

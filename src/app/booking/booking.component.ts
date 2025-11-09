@@ -1,4 +1,4 @@
-import { Component, PLATFORM_ID, Inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, PLATFORM_ID, Inject, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatInputModule } from '@angular/material/input';
@@ -149,6 +149,7 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   currentImageIndex = 0;
   currentImage = this.imagesApart1[0];
+  showScrollToTop: boolean = false;
 
   private isBrowser: boolean;
 
@@ -176,6 +177,23 @@ export class BookingComponent implements OnInit, OnDestroy {
     });
   }
 
+  @HostListener('window:scroll', [])
+  onWindowScroll() {
+    if (this.isBrowser) {
+      const scrollPosition = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      this.showScrollToTop = scrollPosition > 300;
+    }
+  }
+
+  scrollToTop(): void {
+    if (this.isBrowser) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  }
+
   ngOnInit(): void {
     // Register translations with the translation service
     this.translationService.addTranslations('booking', this.translationKeys);
@@ -188,6 +206,11 @@ export class BookingComponent implements OnInit, OnDestroy {
     
     // Initialize translations with current language
     this.translations = this.translationService.getTranslations('booking', this.languageService.getCurrentLanguage());
+
+    // Scroll to top when component loads
+    if (this.isBrowser) {
+      window.scrollTo(0, 0);
+    }
   }
 
   ngOnDestroy(): void {

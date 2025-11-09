@@ -89,3 +89,12 @@
     </div>
   </div>
 </div>
+
+<!-- Scroll to Top Button -->
+<button 
+  *ngIf="showScrollToTop" 
+  (click)="scrollToTop()" 
+  class="scroll-to-top"
+  aria-label="Scroll to top">
+  <i class="fas fa-arrow-up"></i>
+</button>

@@ -1,61 +1,76 @@
 <div class="booking-container">
-  <div class="booking-header-section">
-    <div class="booking-text">
-      <h1 class="booking-title">MAKE YOUR RESERVATION</h1>
-      <p class="booking-subtitle">Lorem ipsum dolor sit amet consectetur adipisicing elit. Animi facere, soluta magnam consectetur molestias itaque ad sint fugit architecto incidunt.</p>
-    </div>
-    
-    <div class="search-section">
-      <mat-form-field appearance="fill">
-        <mat-label>Check In</mat-label>
-        <input matInput [matDatepicker]="checkinPicker" [(ngModel)]="checkinDate" 
-               [min]="today"
-               (dateChange)="onCheckinDateChange($event.value)">
-        <mat-datepicker-toggle matSuffix [for]="checkinPicker"></mat-datepicker-toggle>
-        <mat-datepicker #checkinPicker></mat-datepicker>
-      </mat-form-field>
+  <!-- Header Section - Centered -->
+  <div class="booking-header">
+    <h1 class="booking-title">MAKE YOUR RESERVATION</h1>
+    <p class="booking-subtitle">Plan your perfect stay with us. Select your preferred dates and discover our available accommodations. Each room is thoughtfully designed to provide comfort and relaxation during your visit.</p>
+  </div>
 
-      <mat-form-field appearance="fill">
-        <mat-label>Check Out</mat-label>
-        <input matInput [matDatepicker]="checkoutPicker" [(ngModel)]="checkoutDate"
-               [min]="minCheckoutDate">
-        <mat-datepicker-toggle matSuffix [for]="checkoutPicker"></mat-datepicker-toggle>
-        <mat-datepicker #checkoutPicker></mat-datepicker>
-      </mat-form-field>
+  <!-- Search Section - Centered -->
+  <div class="search-section-wrapper">
+    <div class="search-section">
+      <h3 class="search-title">Select Your Dates</h3>
+      <div class="date-fields">
+        <mat-form-field appearance="fill">
+          <mat-label>Check In</mat-label>
+          <input matInput [matDatepicker]="checkinPicker" [(ngModel)]="checkinDate" 
+                 [min]="today"
+                 (dateChange)="onCheckinDateChange($event.value)">
+          <mat-datepicker-toggle matSuffix [for]="checkinPicker"></mat-datepicker-toggle>
+          <mat-datepicker #checkinPicker></mat-datepicker>
+        </mat-form-field>
+
+        <mat-form-field appearance="fill">
+          <mat-label>Check Out</mat-label>
+          <input matInput [matDatepicker]="checkoutPicker" [(ngModel)]="checkoutDate"
+                 [min]="minCheckoutDate">
+          <mat-datepicker-toggle matSuffix [for]="checkoutPicker"></mat-datepicker-toggle>
+          <mat-datepicker #checkoutPicker></mat-datepicker>
+        </mat-form-field>
+      </div>
 
       <button class="search-button" (click)="searchRooms()">
-        Check availability
+        <i class="fas fa-search"></i> Check Availability
       </button>
     </div>
   </div>
 
-  <div class="room-cards" *ngIf="searched && rooms.length > 0">
-    <div class="room-card" *ngFor="let room of rooms" [class.selected-room]="selectedRoom === room">
-      <div class="room-image">
-        <img [src]="room.image" alt="{{ room.name }}">
-      </div>
-      <div class="room-info">
-        <h3>{{ room.name }}</h3>
-        <p class="room-description">{{ room.description }}</p>
-        <div class="room-details">
-          <div class="room-feature"><i class="fas fa-user"></i> {{ room.capacity }} guests</div>
-          <div class="room-feature"><i class="fas fa-bed"></i> {{ room.beds }}</div>
-          <div class="room-feature"><i class="fas fa-bath"></i> {{ room.bathrooms }}</div>
+  <!-- Rooms Section -->
+  <div class="rooms-section" *ngIf="searched">
+    <h2 class="rooms-title" *ngIf="rooms.length > 0">Available Accommodations</h2>
+    <div class="room-cards" *ngIf="rooms.length > 0">
+      <div class="room-card" *ngFor="let room of rooms" [class.selected-room]="selectedRoom === room">
+        <div class="room-image">
+          <img [src]="room.image" alt="{{ room.name }}">
         </div>
-        <div class="room-price">
-          <span class="price-amount">${{ room.price }}</span>
-          <span class="price-period">per night</span>
-        </div>
-        <div class="room-actions">
-          <button class="btn-reserve" (click)="selectRoom(room)">Reserve</button>
-          <button class="btn-details" (click)="openDetailsDialog(room)">Details</button>
+        <div class="room-info">
+          <h3>{{ room.name }}</h3>
+          <p class="room-description">{{ room.description }}</p>
+          <div class="room-details">
+            <div class="room-feature"><i class="fas fa-user"></i> {{ room.capacity }} guests</div>
+            <div class="room-feature"><i class="fas fa-bed"></i> {{ room.beds }}</div>
+            <div class="room-feature"><i class="fas fa-bath"></i> {{ room.bathrooms }} bathroom{{ room.bathrooms > 1 ? 's' : '' }}</div>
+          </div>
+          <div class="room-price">
+            <span class="price-amount">${{ room.price }}</span>
+            <span class="price-period">per night</span>
+          </div>
+          <div class="room-actions">
+            <button class="btn-reserve" (click)="selectRoom(room)">
+              <i class="fas fa-calendar-check"></i> Reserve Now
+            </button>
+            <button class="btn-details" (click)="openDetailsDialog(room)">
+              <i class="fas fa-info-circle"></i> View Details
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="no-rooms" *ngIf="searched && rooms.length === 0">
-    No rooms available for the selected dates.
+    <div class="no-rooms" *ngIf="rooms.length === 0">
+      <i class="fas fa-calendar-times"></i>
+      <h3>No rooms available</h3>
+      <p>We're sorry, but there are no available rooms for the selected dates. Please try selecting different dates.</p>
+    </div>
   </div>
 
   <!-- Modal Overlay -->
@@ -123,3 +138,12 @@
     </div>
   </div>
 </div>
+
+<!-- Scroll to Top Button -->
+<button 
+  *ngIf="showScrollToTop" 
+  (click)="scrollToTop()" 
+  class="scroll-to-top"
+  aria-label="Scroll to top">
+  <i class="fas fa-arrow-up"></i>
+</button>

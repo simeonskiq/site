@@ -1,0 +1,62 @@
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1 class="auth-title">Welcome Back</h1>
+      <p class="auth-subtitle">Sign in to your account</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" [formGroup]="loginForm" class="auth-form">
+      <div class="form-group">
+        <label for="email">
+          <mat-icon>email</mat-icon>
+          Email
+        </label>
+        <input 
+          type="email" 
+          id="email" 
+          formControlName="email" 
+          class="form-control"
+          [class.invalid]="isFieldInvalid('email')"
+          placeholder="Enter your email">
+        <span *ngIf="isFieldInvalid('email')" class="error-message">
+          {{ getErrorMessage('email') }}
+        </span>
+      </div>
+
+      <div class="form-group">
+        <label for="password">
+          <mat-icon>lock</mat-icon>
+          Password
+        </label>
+        <input 
+          type="password" 
+          id="password" 
+          formControlName="password" 
+          class="form-control"
+          [class.invalid]="isFieldInvalid('password')"
+          placeholder="Enter your password">
+        <span *ngIf="isFieldInvalid('password')" class="error-message">
+          {{ getErrorMessage('password') }}
+        </span>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger">
+        {{ errorMessage }}
+      </div>
+
+      <button 
+        type="submit" 
+        class="btn btn-primary" 
+        [disabled]="loginForm.invalid || isLoading">
+        <mat-icon *ngIf="!isLoading">login</mat-icon>
+        <span *ngIf="isLoading">Signing In...</span>
+        <span *ngIf="!isLoading">Sign In</span>
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Don't have an account? <a routerLink="/register">Sign Up</a></p>
+    </div>
+  </div>
+</div>
+

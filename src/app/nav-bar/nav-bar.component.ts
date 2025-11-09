@@ -1,9 +1,11 @@
 import { Component, HostListener, OnInit, PLATFORM_ID, Inject, OnDestroy } from '@angular/core';
 import { RouterModule } from '@angular/router';
+import { CommonModule } from '@angular/common';
 import { isPlatformBrowser } from '@angular/common';
 import { LanguageService } from '../services/language.service';
 import { TranslationService } from '../services/translation.service';
 import { TranslatePipe } from '../pipes/translate.pipe';
+import { AuthService, User } from '../services/auth.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -11,7 +13,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './nav-bar.component.html',
   styleUrls: ['./nav-bar.component.css'],
   standalone: true,
-  imports: [RouterModule, TranslatePipe]
+  imports: [RouterModule, TranslatePipe, CommonModule]
 })
 export class NavBarComponent implements OnInit, OnDestroy {
   private lastScrollPosition = 0;
@@ -19,11 +21,15 @@ export class NavBarComponent implements OnInit, OnDestroy {
   currentLang: 'bg' | 'en' = 'en'; // Default language is English
   private isBrowser: boolean;
   private langSubscription: Subscription | null = null;
+  private authSubscription: Subscription | null = null;
+  isAuthenticated = false;
+  currentUser: User | null = null;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private languageService: LanguageService,
-    private translationService: TranslationService
+    private translationService: TranslationService,
+    private authService: AuthService
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
@@ -33,12 +39,29 @@ export class NavBarComponent implements OnInit, OnDestroy {
     this.langSubscription = this.languageService.currentLanguage$.subscribe(lang => {
       this.currentLang = lang;
     });
+
+    // Subscribe to authentication state
+    this.authSubscription = this.authService.currentUser$.subscribe(user => {
+      this.isAuthenticated = !!user;
+      this.currentUser = user;
+    });
+
+    // Initialize authentication state
+    this.isAuthenticated = this.authService.isAuthenticated();
+    this.currentUser = this.authService.getCurrentUser();
+  }
+
+  logout(): void {
+    this.authService.logout();
   }
 
   ngOnDestroy(): void {
-    // Clean up subscription
+    // Clean up subscriptions
     if (this.langSubscription) {
       this.langSubscription.unsubscribe();
+    }
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
     }
   }
 

@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, PLATFORM_ID, Inject, OnDestroy } from '@angular/core';
+import { Component, OnInit, AfterViewInit, PLATFORM_ID, Inject, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -45,6 +45,7 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
   // Add missing properties referenced in the template
   successMessage = false;
   errorMessage = false;
+  showScrollToTop: boolean = false;
 
   // EmailJS configuration
   private emailJsServiceId = 'YOUR_SERVICE_ID'; // Replace with your EmailJS service ID
@@ -142,6 +143,28 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
     
     // Initialize translations with current language
     this.translations = this.translationService.getTranslations('contact', this.languageService.getCurrentLanguage());
+
+    // Scroll to top when component loads
+    if (this.isBrowser) {
+      window.scrollTo(0, 0);
+    }
+  }
+
+  @HostListener('window:scroll', [])
+  onWindowScroll() {
+    if (this.isBrowser) {
+      const scrollPosition = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+      this.showScrollToTop = scrollPosition > 300;
+    }
+  }
+
+  scrollToTop(): void {
+    if (this.isBrowser) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
   }
 
   ngAfterViewInit() {
