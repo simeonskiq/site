@@ -33,7 +33,6 @@
     "express-json": "^1.0.0",
     "jsonwebtoken": "^9.0.2",
     "leaflet": "^1.9.4",
-    "msnodesqlv8": "^5.1.1",
     "mssql": "^12.1.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
