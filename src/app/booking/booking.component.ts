@@ -13,6 +13,8 @@ import { isPlatformBrowser } from '@angular/common';
 import { TranslationService } from '../services/translation.service';
 import { LanguageService } from '../services/language.service';
 import { Subscription } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { AuthService, User } from '../services/auth.service';
 
 interface Room {
   id: number;
@@ -72,6 +74,7 @@ export class BookingComponent implements OnInit, OnDestroy {
   endDate: Date | null = null;
   showModal: boolean = false;
   showDetailsModal: boolean = false;
+  currentUser: User | null = null;
 
   // Add missing properties for the form
   bookingForm: FormGroup;
@@ -160,7 +163,8 @@ export class BookingComponent implements OnInit, OnDestroy {
     private formBuilder: FormBuilder,
     @Inject(PLATFORM_ID) platformId: Object,
     private translationService: TranslationService,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private authService: AuthService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.today.setHours(0, 0, 0, 0);
@@ -206,6 +210,9 @@ export class BookingComponent implements OnInit, OnDestroy {
     
     // Initialize translations with current language
     this.translations = this.translationService.getTranslations('booking', this.languageService.getCurrentLanguage());
+
+    // Load current user (for autofill)
+    this.currentUser = this.authService.getCurrentUser();
 
     // Scroll to top when component loads
     if (this.isBrowser) {
@@ -284,54 +291,57 @@ export class BookingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.rooms = [
-      {
-        id: 1,
-        name: 'Апартамент 1',
-        description: 'Насладете се на комфорт и уединение в нашия Апартамент с една спалня.',
-        image: '../../images/apart1/IMG_3708.JPEG',
-        capacity: 2,
-        beds: '1 Двойно легло',
-        bathrooms: 1,
-        price: 99,
-        images: this.imagesApart1
-      },
-      {
-        id: 2,
-        name: 'Апартамент 2',
-        description: 'Ако търсите простор и удобство, този апартамент е за вас!',
-        image: '../../images/apart2/IMG_3734.JPEG',
-        capacity: 2,
-        beds: '1 Двойно легло',
-        bathrooms: 1,
-        price: 149,
-        images: this.imagesApart2
-      },
-      {
-        id: 3,
-        name: 'Апартамент 3',
-        description: 'Перфектен за тези, които търсят уют и спокойствие, този апартамент с една спалня съчетава комфорт и функционалност.',
-        image: '../../images/apart3/IMG_3763.JPEG',
-        capacity: 4,
-        beds: '1 Двойно легло + Разтегателен диван',
-        bathrooms: 2,
-        price: 199,
-        images: this.imagesApart3
-      },
-      {
-        id: 4,
-        name: 'Студио',
-        description: 'Нашето Студио предлага уют и удобство с модерен интериор и тераса.',
-        image: '../../images/studio/IMG_3724.JPEG',
-        capacity: 2,
-        beds: 'Разтегателен диван',
-        bathrooms: 1,
-        price: 249,
-        images: this.imagesStudio
-      }
-    ];
-    
-    this.searched = true;
+    // Load available rooms from backend so already-approved bookings are excluded
+    const startDateStr = this.checkinDate.toISOString().split('T')[0];
+    const endDateStr = this.checkoutDate.toISOString().split('T')[0];
+
+    this.http
+      .get<any[]>(`${environment.apiUrl}/api/public/available-rooms`, {
+        params: {
+          startDate: startDateStr,
+          endDate: endDateStr
+        }
+      })
+      .subscribe({
+        next: (roomsFromApi) => {
+          // Map API rooms to UI model and attach image arrays
+          this.rooms = roomsFromApi.map((r) => {
+            let images: string[] = [];
+            let image: string = '';
+            if (r.Name === 'Апартамент 1') {
+              images = this.imagesApart1;
+              image = this.imagesApart1[0];
+            } else if (r.Name === 'Апартамент 2') {
+              images = this.imagesApart2;
+              image = this.imagesApart2[0];
+            } else if (r.Name === 'Апартамент 3') {
+              images = this.imagesApart3;
+              image = this.imagesApart3[0];
+            } else if (r.Name === 'Студио') {
+              images = this.imagesStudio;
+              image = this.imagesStudio[0];
+            }
+
+            return {
+              id: r.Id,
+              name: r.Name,
+              description: r.Type || '',
+              image,
+              capacity: 2,
+              beds: '',
+              bathrooms: 1,
+              price: r.BasePrice || 0,
+              images
+            } as Room;
+          });
+
+          this.searched = true;
+        },
+        error: (err) => {
+          console.error('Failed to load available rooms', err);
+          alert('There was an error loading available rooms. Please try again.');
+        }
+      });
   }
 
   selectRoom(room: Room) {
@@ -340,12 +350,25 @@ export class BookingComponent implements OnInit, OnDestroy {
     if (room && !room.title) {
       room.title = room.name;
     }
+    // Autofill from user account if available
+    if (this.currentUser) {
+      this.reservationData.email = this.currentUser.email || '';
+      this.reservationData.phone = this.currentUser.phone || '';
+      this.reservationData.name1 = this.currentUser.firstName || '';
+      this.reservationData.name2 = this.currentUser.lastName || '';
+    }
     // For the reservation form
     this.showReservationForm = true;
   }
 
   contactAboutRoom(room: Room) {
     this.selectedRoom = room;
+    if (this.currentUser) {
+      this.reservationData.email = this.currentUser.email || '';
+      this.reservationData.phone = this.currentUser.phone || '';
+      this.reservationData.name1 = this.currentUser.firstName || '';
+      this.reservationData.name2 = this.currentUser.lastName || '';
+    }
     this.showReservationForm = true;
   }
 
@@ -377,8 +400,9 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   confirmReservation() {
-    if (!this.reservationData.name1 || !this.reservationData.name2 || !this.reservationData.phone || !this.reservationData.email) {
-      alert('Please fill in all required fields');
+    // Email is required, phone is optional; names remain required
+    if (!this.reservationData.name1 || !this.reservationData.name2 || !this.reservationData.email) {
+      alert('Please fill in first name, last name, and email');
       return;
     }
 
@@ -404,58 +428,36 @@ export class BookingComponent implements OnInit, OnDestroy {
       })
       .join('');
 
-    // Common parameters for both emails
-    const commonParams = {
-      guest_name: `${this.reservationData.name1} ${this.reservationData.name2}`,
-      guest_phone: this.reservationData.phone,
-      guest_email: this.reservationData.email,
-      check_in: this.checkinDate?.toLocaleDateString(),
-      check_out: this.checkoutDate?.toLocaleDateString(),
-      room_name: this.selectedRoom.name,
-      room_price: this.selectedRoom.price,
-      reservation_date: new Date().toLocaleString()
+    // Build payload and let backend handle emails + persistence
+    const payload = {
+      firstName: this.reservationData.name1,
+      lastName: this.reservationData.name2,
+      email: this.reservationData.email,
+      phone: this.reservationData.phone,
+      roomId: this.selectedRoom?.id,
+      roomName: this.selectedRoom?.name,
+      startDate: this.checkinDate?.toISOString().split('T')[0],
+      endDate: this.checkoutDate?.toISOString().split('T')[0],
+      pricePerNight: this.selectedRoom?.price,
+      // Optional: send formatted description so backend can include it in emails later if needed
+      notes: formattedDescription,
+      userId: this.currentUser?.id
     };
 
-    // Send email using EmailJS
-    if (!(window as any).emailjs) {
-      console.error('EmailJS not loaded');
-      alert('There was an error processing your reservation. Please try again.');
-      return;
-    }
-
-    // Send emails
-    Promise.all([
-      // Send confirmation to guest
-      (window as any).emailjs.send(
-        'service_2sirswb',
-        'template_nj1goue',
-        {
-          ...commonParams,
-          to_email: this.reservationData.email,
-          room_description: formattedDescription
-        },
-        'PStyZFWlBKGj7ZBI8'
-      ),
-      // Send notification to hotel
-      (window as any).emailjs.send(
-        'service_2sirswb',
-        'template_j9ekjdl',
-        {
-          ...commonParams,
-          to_email: 'sunflowerhotelvarna@gmail.com' // Hotel's email
-        },
-        'PStyZFWlBKGj7ZBI8'
-      )
-    ])
-    .then((responses) => {
-      console.log('Emails sent successfully', responses);
-      alert('Reservation confirmed! Please check your email for confirmation details.');
-      this.showReservationForm = false;
-      this.resetReservationForm();
-    })
-    .catch((error) => {
-      console.error('Error sending emails:', error);
-      alert('There was an error processing your reservation. Please try again.');
+    this.http.post(`${environment.apiUrl}/api/public/reservations`, payload).subscribe({
+      next: () => {
+        alert('Reservation confirmed! Please check your email for confirmation details.');
+        this.showReservationForm = false;
+        this.resetReservationForm();
+        // After successful reservation, navigate to "My Reservations" if logged in
+        if (this.currentUser) {
+          this.router.navigate(['/my-reservations']);
+        }
+      },
+      error: (err) => {
+        console.error('Failed to create reservation:', err);
+        alert('There was an error processing your reservation. Please try again.');
+      }
     });
   }
 

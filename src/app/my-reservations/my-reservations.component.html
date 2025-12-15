@@ -1,0 +1,34 @@
+<div class="my-res-container">
+  <h1>My Reservations</h1>
+
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="loading">Loading your reservations...</div>
+
+  <div *ngIf="!loading && !reservations.length" class="empty">
+    You don't have any reservations yet.
+  </div>
+
+  <div *ngIf="!loading && reservations.length" class="cards">
+    <div class="card" *ngFor="let r of reservations">
+      <h2>{{ r.RoomName || 'Room #' + r.RoomId }}</h2>
+      <p class="status">Status: <span class="badge" [class.badge-canceled]="r.Status === 'Cancelled'">{{ r.Status }}</span></p>
+      <p>Check-in: {{ r.StartDate | date }}</p>
+      <p>Check-out: {{ r.EndDate | date }}</p>
+      <p *ngIf="r.TotalPrice">Total price: {{ r.TotalPrice | currency }}</p>
+      <p *ngIf="r.CreatedAt" class="meta-info">Created: {{ r.CreatedAt | date:'short' }}</p>
+      <p *ngIf="r.CanceledAt" class="meta-info canceled-info">Canceled: {{ r.CanceledAt | date:'short' }}</p>
+      <button 
+        *ngIf="canCancel(r)" 
+        class="btn-cancel" 
+        (click)="cancelReservation(r.Id)"
+        [disabled]="loading">
+        Cancel Reservation
+      </button>
+    </div>
+  </div>
+</div>
+
+

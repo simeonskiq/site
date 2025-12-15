@@ -17,8 +17,26 @@
         <a routerLink="/register" routerLinkActive="active" class="auth-link auth-link-primary">Register</a>
       </ng-container>
       <ng-container *ngIf="isAuthenticated">
-        <span class="user-info">{{ currentUser?.firstName || currentUser?.email }}</span>
-        <button (click)="logout()" class="auth-link auth-link-logout">Logout</button>
+        <div class="user-menu">
+          <button class="user-button" type="button" (click)="toggleUserMenu()">
+            <span class="user-info">{{ currentUser?.firstName || currentUser?.email }}</span>
+            <span class="caret">▼</span>
+          </button>
+          <div class="user-dropdown" *ngIf="showUserMenu">
+            <button *ngIf="isAdmin" class="dropdown-item" type="button" routerLink="/admin">
+              Admin Panel
+            </button>
+            <button class="dropdown-item" type="button" routerLink="/profile">
+              My Profile
+            </button>
+            <button class="dropdown-item" type="button" routerLink="/my-reservations">
+              My Reservations
+            </button>
+            <button class="dropdown-item" type="button" (click)="logout()">
+              Logout
+            </button>
+          </div>
+        </div>
       </ng-container>
     </div>
     <div class="language-selector">

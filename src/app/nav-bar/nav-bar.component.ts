@@ -24,6 +24,8 @@ export class NavBarComponent implements OnInit, OnDestroy {
   private authSubscription: Subscription | null = null;
   isAuthenticated = false;
   currentUser: User | null = null;
+  isAdmin = false;
+  showUserMenu = false;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -44,11 +46,17 @@ export class NavBarComponent implements OnInit, OnDestroy {
     this.authSubscription = this.authService.currentUser$.subscribe(user => {
       this.isAuthenticated = !!user;
       this.currentUser = user;
+      this.isAdmin = !!user && (user.role ?? 'User') !== 'User';
+      if (!this.isAuthenticated) {
+        this.showUserMenu = false;
+      }
     });
 
     // Initialize authentication state
     this.isAuthenticated = this.authService.isAuthenticated();
     this.currentUser = this.authService.getCurrentUser();
+    const role = this.currentUser?.role ?? 'User';
+    this.isAdmin = role !== 'User';
   }
 
   logout(): void {
@@ -79,5 +87,9 @@ export class NavBarComponent implements OnInit, OnDestroy {
 
   changeLanguage(lang: 'bg' | 'en'): void {
     this.languageService.setLanguage(lang);
+  }
+
+  toggleUserMenu(): void {
+    this.showUserMenu = !this.showUserMenu;
   }
 }

@@ -1,0 +1,77 @@
+.profile-container {
+  min-height: 100vh;
+  padding: 100px 2rem 80px;
+  max-width: 800px;
+  margin: 0 auto;
+  color: #f9fafb;
+}
+
+.profile-container h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.sections {
+  display: grid;
+  gap: 2rem;
+}
+
+.section {
+  background: rgba(15, 23, 42, 0.9);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.8);
+}
+
+.section h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.25rem;
+}
+
+.form-group input {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(15, 23, 42, 0.9);
+  color: #f9fafb;
+}
+
+.btn {
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #f9fafb;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.error {
+  color: #f97373;
+  margin-bottom: 1rem;
+}
+
+.success {
+  color: #4ade80;
+  margin-bottom: 1rem;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+

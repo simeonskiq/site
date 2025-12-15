@@ -95,7 +95,18 @@
         </div>
         <div class="form-group">
           <label for="email">Email Address:</label>
-          <input type="email" id="email" [(ngModel)]="reservationData.email" class="form-control" required placeholder="Enter email address">
+          <input
+            type="email"
+            id="email"
+            [(ngModel)]="reservationData.email"
+            class="form-control"
+            required
+            placeholder="Enter email address"
+            [readonly]="!!currentUser"
+          >
+          <small class="hint" *ngIf="currentUser">
+            Email comes from your profile and cannot be changed here. To update it, change your email in your account settings.
+          </small>
         </div>
         <div class="booking-summary">
           <p>Check-in: {{checkinDate | date}}</p>

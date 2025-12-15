@@ -1,0 +1,82 @@
+.my-res-container {
+  min-height: 100vh;
+  padding: 100px 2rem 80px;
+  max-width: 1000px;
+  margin: 0 auto;
+  color: #f9fafb;
+}
+
+.my-res-container h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background: rgba(15, 23, 42, 0.9);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.8);
+}
+
+.status {
+  margin: 0.5rem 0;
+}
+
+.badge {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.error {
+  color: #f97373;
+  margin-bottom: 1rem;
+}
+
+.empty {
+  margin-top: 1.5rem;
+}
+
+.badge-canceled {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.meta-info {
+  font-size: 0.85rem;
+  color: rgba(203, 213, 225, 0.7);
+  margin: 0.25rem 0;
+}
+
+.canceled-info {
+  color: #fca5a5;
+}
+
+.btn-cancel {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 6px;
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+

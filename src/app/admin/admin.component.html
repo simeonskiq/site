@@ -1,0 +1,118 @@
+<div class="admin-container">
+  <h1>Administration Panel</h1>
+
+  <div class="cards">
+    <div class="card" *ngIf="summary">
+      <h2>Pending Reservations</h2>
+      <p class="value">{{ summary.totalPendingReservations }}</p>
+    </div>
+    <div class="card" *ngIf="summary">
+      <h2>Occupancy Rate</h2>
+      <p class="value">{{ (summary.occupancyRate || 0) * 100 | number : '1.0-1' }}%</p>
+    </div>
+    <div class="card" *ngIf="summary">
+      <h2>Blocked Rooms</h2>
+      <p class="value">{{ summary.blockedRoomsCount }}</p>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="error">
+    {{ error }}
+  </div>
+
+  <section class="section">
+    <h2>Pending Reservations</h2>
+    <div *ngIf="loading">Loading reservations...</div>
+    <table *ngIf="!loading && pendingReservations.length" class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>User</th>
+          <th>Room</th>
+          <th>Dates</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of pendingReservations">
+          <td>{{ r.Id }}</td>
+          <td>{{ r.Email }}</td>
+          <td>{{ r.RoomName }}</td>
+          <td>{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
+          <td>
+            <span [class.status-canceled]="r.Status === 'Cancelled'">{{ r.DisplayStatus || r.Status }}</span>
+          </td>
+          <td>
+            <button (click)="approveReservation(r.Id)" class="btn btn-approve">
+              Approve
+            </button>
+            <button (click)="rejectReservation(r.Id)" class="btn btn-reject">
+              Reject
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="!loading && !pendingReservations.length">No pending reservations.</p>
+  </section>
+
+  <section class="section">
+    <h2>Rooms & Availability</h2>
+    <table *ngIf="rooms.length" class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Visible</th>
+          <th>Currently Blocked</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let room of rooms">
+          <td>{{ room.Name }}</td>
+          <td>{{ room.Type }}</td>
+          <td>{{ room.Status }}</td>
+          <td>{{ room.VisibleToUsers ? 'Yes' : 'No' }}</td>
+          <td>{{ room.IsCurrentlyBlocked ? 'Yes' : 'No' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="!rooms.length">No rooms defined yet.</p>
+  </section>
+
+  <section class="section">
+    <h2>Reservation History</h2>
+    <table *ngIf="allReservations.length" class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>User / Guest</th>
+          <th>Room</th>
+          <th>Dates</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of allReservations">
+          <td>{{ r.Id }}</td>
+          <td>{{ r.Email || (r.GuestFirstName + ' ' + r.GuestLastName) }}</td>
+          <td>{{ r.RoomName }}</td>
+          <td>{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
+          <td>{{ r.Status }}</td>
+          <td>
+            <button class="btn btn-approve" (click)="changeStatus(r.Id, 'Approved')">Approve</button>
+            <button class="btn btn-reject" (click)="changeStatus(r.Id, 'Rejected')">Reject</button>
+            <button class="btn" (click)="changeStatus(r.Id, 'Cancelled')">Cancel</button>
+            <button class="btn" (click)="changeStatus(r.Id, 'Completed')">Complete</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="!allReservations.length">No reservations yet.</p>
+  </section>
+</div>
+
+

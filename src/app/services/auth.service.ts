@@ -11,6 +11,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  role?: string;
 }
 
 export interface AuthResponse {
@@ -98,6 +99,10 @@ export class AuthService {
       return null;
     }
     return localStorage.getItem('auth_token');
+  }
+
+  updateStoredUser(user: User): void {
+    this.setUser(user);
   }
 
   private setToken(token: string): void {
