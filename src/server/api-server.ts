@@ -52,7 +52,7 @@ app.use((req, res, next) => {
 });
 
 // JWT secret key (in production, use environment variable)
-const JWT_SECRET = process.env['JWT_SECRET'] || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env['JWT_SECRET'] || 'npUtks96Wbo1f8mJYd2z1A/79vQPQIaDzbBcQe3GEnsAgFB3xP4rMebrMRYCVw3BiHZfe2LzEFY5F0IXgCZOhA==';
 
 // Email configuration (set these in your environment)
 const SMTP_HOST = process.env['SMTP_HOST'] || 'smtp.gmail.com';
