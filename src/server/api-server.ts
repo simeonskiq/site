@@ -1624,7 +1624,7 @@ io.on('connection', (socket) => {
 });
 
 httpServer.listen(port, () => {
-  console.log(`API server listening on http://localhost:${port}`);
+  console.log(`API server listening on https://jlsmvmycvnkfjqlicdrl.supabase.co:${port}`);
   console.log('✓ MSSQL database connection ready');
   console.log('✓ Supabase storage configured (storage only)');
   console.log('✓ WebSocket server ready');
