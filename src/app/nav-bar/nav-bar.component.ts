@@ -26,6 +26,7 @@ export class NavBarComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   isAdmin = false;
   showUserMenu = false;
+  showMobileMenu = false;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -91,5 +92,13 @@ export class NavBarComponent implements OnInit, OnDestroy {
 
   toggleUserMenu(): void {
     this.showUserMenu = !this.showUserMenu;
+  }
+
+  toggleMobileMenu(): void {
+    this.showMobileMenu = !this.showMobileMenu;
+  }
+
+  closeMobileMenu(): void {
+    this.showMobileMenu = false;
   }
 }

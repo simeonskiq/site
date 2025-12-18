@@ -1,19 +1,54 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  position: relative;
+}
+
+:host::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('../../images/hotel/hotel-4.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  z-index: -2;
+}
+
+:host::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: -1;
+}
+
 .admin-container {
   position: relative;
   min-height: 100vh;
-  padding: 100px 2rem 80px; /* align with booking page */
+  padding: 100px 2rem 80px;
   max-width: 1200px;
   margin: 0 auto;
-  color: #e5e7eb;
+  color: #f9fafb;
   z-index: 1;
 }
 
 .admin-container h1 {
-  font-size: 2rem;
-  font-weight: 600;
+  font-size: 2.5rem;
+  font-weight: 700;
   margin-bottom: 2rem;
-  color: #f9fafb;
-  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  color: #fff;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 50%, #c7d2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .cards {
@@ -24,17 +59,19 @@
 }
 
 .card {
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 64, 175, 0.65));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .card h2 {
   font-size: 0.95rem;
   margin-bottom: 0.75rem;
-  color: #cbd5f5;
+  color: rgba(255, 255, 255, 0.9);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -42,7 +79,8 @@
 .card .value {
   font-size: 2rem;
   font-weight: 600;
-  color: #f9fafb;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .section {
@@ -52,17 +90,21 @@
 .section h2 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
-  color: #e5e7eb;
+  color: #fff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
-  background: rgba(15, 23, 42, 0.9);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.8);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .table th,
@@ -74,17 +116,18 @@
 }
 
 .table th {
-  background: rgba(15, 23, 42, 0.98);
+  background: rgba(255, 255, 255, 0.1);
   font-weight: 600;
-  color: #cbd5f5;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .table tr:nth-child(even) td {
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .table tr:hover td {
-  background: rgba(30, 64, 175, 0.35);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .btn {
@@ -96,10 +139,13 @@
   margin-right: 0.25rem;
   color: #f9fafb;
   transition: all 0.2s ease;
+  background: rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.5);
 }
 
 .btn-approve {
   background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: 1px solid rgba(34, 197, 94, 0.5);
 }
 
 .btn-approve:hover {
@@ -109,6 +155,7 @@
 
 .btn-reject {
   background: linear-gradient(135deg, #ef4444, #b91c1c);
+  border: 1px solid rgba(239, 68, 68, 0.5);
 }
 
 .btn-reject:hover {
@@ -116,12 +163,268 @@
   box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
+.btn-cancel {
+  background: rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+.btn-cancel:hover {
+  background: rgba(239, 68, 68, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.btn-complete {
+  background: rgba(34, 197, 94, 0.3);
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  color: #86efac;
+}
+
+.btn-complete:hover {
+  background: rgba(34, 197, 94, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+}
+
 .error {
-  color: #f97373;
+  color: #fca5a5;
   margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 8px;
 }
 
 .status-canceled {
   color: #fca5a5;
   font-style: italic;
+}
+
+/* Search Section */
+.search-section {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.search-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-clear {
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 6px;
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.2s;
+  height: fit-content;
+  font-size: 0.9rem;
+}
+
+.btn-clear:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.pagination-btn {
+  padding: 0.5rem 1rem;
+  background: rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+  .admin-container {
+    padding: 100px 1.5rem 80px;
+  }
+
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .table {
+    font-size: 0.85rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .btn {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .search-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-group {
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-container {
+    padding: 100px 1rem 80px;
+  }
+
+  .admin-container h1 {
+    font-size: 2rem;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .section h2 {
+    font-size: 1.1rem;
+  }
+
+  .table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table tbody {
+    display: block;
+  }
+
+  .table tr {
+    display: block;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+  }
+
+  .table td {
+    display: block;
+    text-align: right;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .table td:before {
+    content: attr(data-label);
+    float: left;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .table td:last-child {
+    border-bottom: none;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    margin: 0.25rem 0;
+    text-align: center;
+  }
+
+  .search-section {
+    padding: 1.25rem;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .pagination-info {
+    order: -1;
+    text-align: center;
+  }
 }

@@ -175,6 +175,8 @@ async function createReservationsTable(pool: sql.ConnectionPool): Promise<void> 
         ALTER TABLE [dbo].[Reservations] ADD [GuestPhone] NVARCHAR(50) NULL;
       IF COL_LENGTH('dbo.Reservations', 'Notes') IS NULL
         ALTER TABLE [dbo].[Reservations] ADD [Notes] NVARCHAR(MAX) NULL;
+      IF COL_LENGTH('dbo.Reservations', 'CanceledBy') IS NULL
+        ALTER TABLE [dbo].[Reservations] ADD [CanceledBy] NVARCHAR(20) NULL; -- 'User' or 'Admin'
     `);
 
     console.log('Reservations table ready');

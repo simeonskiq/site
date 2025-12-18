@@ -1,34 +1,114 @@
 <div class="my-res-container">
-  <h1>My Reservations</h1>
+  <h1>{{ translations.title || 'My Reservations' }}</h1>
 
   <div *ngIf="error" class="error">
     {{ error }}
   </div>
 
-  <div *ngIf="loading">Loading your reservations...</div>
-
-  <div *ngIf="!loading && !reservations.length" class="empty">
-    You don't have any reservations yet.
+  <!-- Tabs -->
+  <div class="tabs">
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'active'"
+      (click)="switchTab('active')">
+      {{ translations.active || 'Active Reservations' }}
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="activeTab === 'history'"
+      (click)="switchTab('history')">
+      {{ translations.history || 'Reservation History' }}
+    </button>
   </div>
 
-  <div *ngIf="!loading && reservations.length" class="cards">
-    <div class="card" *ngFor="let r of reservations">
-      <h2>{{ r.RoomName || 'Room #' + r.RoomId }}</h2>
-      <p class="status">Status: <span class="badge" [class.badge-canceled]="r.Status === 'Cancelled'">{{ r.Status }}</span></p>
-      <p>Check-in: {{ r.StartDate | date }}</p>
-      <p>Check-out: {{ r.EndDate | date }}</p>
-      <p *ngIf="r.TotalPrice">Total price: {{ r.TotalPrice | currency }}</p>
-      <p *ngIf="r.CreatedAt" class="meta-info">Created: {{ r.CreatedAt | date:'short' }}</p>
-      <p *ngIf="r.CanceledAt" class="meta-info canceled-info">Canceled: {{ r.CanceledAt | date:'short' }}</p>
+  <!-- Active Reservations Tab -->
+  <div *ngIf="activeTab === 'active'">
+    <div *ngIf="loading">{{ translations.loading || 'Loading your reservations...' }}</div>
+
+    <div *ngIf="!loading && !activeReservations.length" class="empty">
+      {{ translations.noActive || 'You don\'t have any active reservations.' }}
+    </div>
+
+    <div *ngIf="!loading && activeReservations.length" class="cards">
+      <div class="card" *ngFor="let r of activeReservations">
+        <h2>{{ r.RoomName || 'Room #' + r.RoomId }}</h2>
+        <p class="status">{{ translations.status || 'Status:' }} <span class="badge" [class.badge-approved]="r.Status === 'Approved'" [class.badge-pending]="r.Status === 'Pending'">{{ r.Status }}</span></p>
+        <p>{{ translations.checkin || 'Check-in:' }} {{ r.StartDate | date }}</p>
+        <p>{{ translations.checkout || 'Check-out:' }} {{ r.EndDate | date }}</p>
+        <p *ngIf="r.TotalPrice">{{ translations.totalPrice || 'Total price:' }} {{ r.TotalPrice | currency }}</p>
+        <p *ngIf="r.CreatedAt" class="meta-info">{{ translations.created || 'Created:' }} {{ r.CreatedAt | date:'short' }}</p>
+        <button 
+          *ngIf="canCancel(r)" 
+          class="btn-cancel" 
+          (click)="cancelReservation(r.Id)"
+          [disabled]="loading">
+          {{ translations.cancel || 'Cancel Reservation' }}
+        </button>
+        <p *ngIf="!canCancel(r) && r.Status === 'Approved'" class="info-message">
+          {{ translations.cannotCancel || 'This reservation has been approved and cannot be canceled. Please contact support if needed.' }}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Tab -->
+  <div *ngIf="activeTab === 'history'">
+    <!-- Search Section -->
+    <div class="search-section">
+      <div class="search-group">
+        <label for="searchDate">{{ translations.searchDate || 'Search by Date:' }}</label>
+        <input 
+          type="date" 
+          id="searchDate"
+          [(ngModel)]="searchDate"
+          class="search-input">
+      </div>
+      <div class="search-group">
+        <label for="searchTags">{{ translations.searchTags || 'Search by Status/Room:' }}</label>
+        <input 
+          type="text" 
+          id="searchTags"
+          [(ngModel)]="searchTags"
+          placeholder="e.g., Cancelled, Room name..."
+          class="search-input">
+      </div>
       <button 
-        *ngIf="canCancel(r)" 
-        class="btn-cancel" 
-        (click)="cancelReservation(r.Id)"
-        [disabled]="loading">
-        Cancel Reservation
+        *ngIf="searchDate || searchTags" 
+        class="btn-clear" 
+        (click)="clearSearch()">
+        {{ translations.clearSearch || 'Clear Search' }}
       </button>
+    </div>
+
+    <div *ngIf="loading">{{ translations.loadingHistory || 'Loading reservation history...' }}</div>
+
+    <div *ngIf="!loading && !getFilteredHistory().length" class="empty">
+      <p *ngIf="!searchDate && !searchTags">{{ translations.noHistory || 'You don\'t have any reservation history.' }}</p>
+      <p *ngIf="searchDate || searchTags">{{ translations.noResults || 'No reservations found matching your search criteria.' }}</p>
+    </div>
+
+    <div *ngIf="!loading && getFilteredHistory().length" class="cards">
+      <div class="card" *ngFor="let r of getFilteredHistory()">
+        <h2>{{ r.RoomName || 'Room #' + r.RoomId }}</h2>
+        <p class="status">
+          {{ translations.status || 'Status:' }} <span class="badge" 
+            [class.badge-canceled]="r.Status === 'Cancelled'"
+            [class.badge-completed]="r.Status === 'Completed'"
+            [class.badge-rejected]="r.Status === 'Rejected'">
+            {{ r.Status }}
+          </span>
+        </p>
+        <p *ngIf="r.Status === 'Cancelled'" class="cancel-message">
+          {{ getCancelMessage(r) }}
+        </p>
+        <p>{{ translations.checkin || 'Check-in:' }} {{ r.StartDate | date }}</p>
+        <p>{{ translations.checkout || 'Check-out:' }} {{ r.EndDate | date }}</p>
+        <p *ngIf="r.TotalPrice">{{ translations.totalPrice || 'Total price:' }} {{ r.TotalPrice | currency }}</p>
+        <p *ngIf="r.CreatedAt" class="meta-info">{{ translations.created || 'Created:' }} {{ r.CreatedAt | date:'short' }}</p>
+        <p *ngIf="r.CanceledAt" class="meta-info canceled-info">
+          {{ translations.canceled || 'Canceled:' }} {{ r.CanceledAt | date:'short' }}
+        </p>
+      </div>
     </div>
   </div>
 </div>
-
-

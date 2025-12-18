@@ -18,10 +18,13 @@
 }
 
 .card {
-  background: rgba(15, 23, 42, 0.9);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-radius: 12px;
   padding: 1.25rem;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.8);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .status {
@@ -77,6 +80,183 @@
 .btn-cancel:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+}
+
+.tab-btn {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: rgba(203, 213, 225, 0.7);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s;
+  margin-bottom: -2px;
+}
+
+.tab-btn:hover {
+  color: #f9fafb;
+  border-bottom-color: rgba(59, 130, 246, 0.5);
+}
+
+.tab-btn.active {
+  color: #60a5fa;
+  border-bottom-color: #60a5fa;
+  font-weight: 500;
+}
+
+/* Search Section */
+.search-section {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.search-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: rgba(203, 213, 225, 0.9);
+  font-size: 0.9rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-clear {
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 6px;
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.2s;
+  height: fit-content;
+}
+
+.btn-clear:hover {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+/* Badge variants */
+.badge-approved {
+  background: rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.badge-pending {
+  background: rgba(251, 191, 36, 0.3);
+  color: #fde047;
+}
+
+.badge-completed {
+  background: rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.badge-rejected {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.cancel-message {
+  color: #fca5a5;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+  font-style: italic;
+}
+
+.info-message {
+  color: #fde047;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(251, 191, 36, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #fde047;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .my-res-container {
+    padding: 100px 1rem 80px;
+  }
+
+  .my-res-container h1 {
+    font-size: 1.75rem;
+  }
+
+  .tabs {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tab-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .search-section {
+    flex-direction: column;
+    padding: 1.25rem;
+  }
+
+  .search-group {
+    min-width: 100%;
+  }
+
+  .btn-cancel,
+  .btn-clear {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
 }
 
 

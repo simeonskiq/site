@@ -74,4 +74,32 @@
   color: #9ca3af;
 }
 
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 100px 1rem 80px;
+  }
+
+  .profile-container h1 {
+    font-size: 1.75rem;
+  }
+
+  .section {
+    padding: 1.25rem;
+  }
+
+  .section h2 {
+    font-size: 1.25rem;
+  }
+
+  .form-group input {
+    width: 100%;
+  }
+
+  .btn {
+    width: 100%;
+    padding: 0.75rem;
+  }
+}
+
 

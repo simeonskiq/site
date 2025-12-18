@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import { createServer } from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import sql from 'mssql';
 import { getDbConnection } from './db.config';
 import bcrypt from 'bcryptjs';
@@ -17,6 +19,13 @@ import {
 } from './supabase-storage.config';
 
 const app = express();
+const httpServer = createServer(app);
+const io = new SocketIOServer(httpServer, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
 
 // Middleware for parsing JSON
 app.use(express.json());
@@ -654,13 +663,14 @@ app.get(
       let query = `
         SELECT r.Id, r.UserId, r.RoomId, r.StartDate, r.EndDate, r.Status, r.TotalPrice,
                r.GuestFirstName, r.GuestLastName, r.GuestEmail, r.GuestPhone,
-               r.CreatedAt, r.CanceledAt,
+               r.CreatedAt, r.CanceledAt, r.CanceledBy,
                COALESCE(u.Email, r.GuestEmail) AS Email,
                COALESCE(u.FirstName, r.GuestFirstName) AS FirstName,
                COALESCE(u.LastName, r.GuestLastName) AS LastName,
                rm.Name AS RoomName,
                CASE 
-                 WHEN r.Status = 'Cancelled' AND r.CanceledAt IS NOT NULL THEN 'Canceled by the user'
+                 WHEN r.Status = 'Cancelled' AND r.CanceledBy = 'User' THEN 'Canceled by user'
+                 WHEN r.Status = 'Cancelled' AND r.CanceledBy = 'Admin' THEN 'Canceled by admin'
                  ELSE r.Status
                END AS DisplayStatus
         FROM [dbo].[Reservations] r
@@ -703,7 +713,7 @@ app.get(
 app.post(
   '/api/admin/reservations/:id/status',
   authMiddleware,
-  requireRole(['Manager', 'SuperAdmin']),
+  requireRole(['Support', 'Manager', 'SuperAdmin']),
   async (req: AuthRequest, res) => {
     const reservationId = Number(req.params['id']);
     const { status } = req.body as { status?: string };
@@ -717,16 +727,23 @@ app.post(
 
     try {
       const pool = await getDbConnection();
+      
+      // If canceling, set CanceledBy to 'Admin'
+      let updateQuery = `UPDATE [dbo].[Reservations]
+           SET Status = @status, UpdatedAt = GETDATE()`;
+      
+      if (status === 'Cancelled') {
+        updateQuery += `, CanceledBy = 'Admin', CanceledAt = GETDATE()`;
+      }
+      
+      updateQuery += ` WHERE Id = @id;
+           SELECT * FROM [dbo].[Reservations] WHERE Id = @id;`;
+      
       const result = await pool
         .request()
         .input('id', sql.Int, reservationId)
         .input('status', sql.NVarChar, status)
-        .query(
-          `UPDATE [dbo].[Reservations]
-           SET Status = @status, UpdatedAt = GETDATE()
-           WHERE Id = @id;
-           SELECT * FROM [dbo].[Reservations] WHERE Id = @id;`
-        );
+        .query(updateQuery);
 
       if (result.recordset.length === 0) {
         return res.status(404).json({ error: 'Reservation not found' });
@@ -741,7 +758,77 @@ app.post(
         );
       }
 
-      res.json(result.recordset[0]);
+      const updatedReservation = result.recordset[0];
+      
+      // Get user email for notification
+      const userResult = await pool
+        .request()
+        .input('reservationId', sql.Int, reservationId)
+        .query(`
+          SELECT COALESCE(u.Email, r.GuestEmail) AS Email,
+                 COALESCE(u.FirstName, r.GuestFirstName) AS FirstName,
+                 COALESCE(u.LastName, r.GuestLastName) AS LastName,
+                 r.RoomId,
+                 rm.Name AS RoomName,
+                 r.StartDate,
+                 r.EndDate
+          FROM [dbo].[Reservations] r
+          LEFT JOIN [dbo].[Users] u ON u.Id = r.UserId
+          LEFT JOIN [dbo].[Rooms] rm ON rm.Id = r.RoomId
+          WHERE r.Id = @reservationId
+        `);
+
+      // Send email notification if status changed to Approved, Rejected, or Cancelled
+      if (userResult.recordset.length > 0 && mailTransporter) {
+        const userData = userResult.recordset[0];
+        const userEmail = userData.Email;
+        const userName = `${userData.FirstName || ''} ${userData.LastName || ''}`.trim() || 'Guest';
+        const roomName = userData.RoomName || 'Room';
+        const checkIn = new Date(userData.StartDate).toLocaleDateString();
+        const checkOut = new Date(userData.EndDate).toLocaleDateString();
+
+        if (userEmail && ['Approved', 'Rejected', 'Cancelled'].includes(status)) {
+          try {
+            let subject = '';
+            let textBody = '';
+            let htmlBody = '';
+
+            if (status === 'Approved') {
+              subject = `Reservation Approved - ${roomName}`;
+              textBody = `Dear ${userName},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been approved.\n\nWe look forward to welcoming you!\n\nBest regards,\nAurora Hotel`;
+              htmlBody = `<p>Dear ${userName},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>approved</strong>.</p><p>We look forward to welcoming you!</p><p>Best regards,<br/>Aurora Hotel</p>`;
+            } else if (status === 'Rejected') {
+              subject = `Reservation Update - ${roomName}`;
+              textBody = `Dear ${userName},\n\nUnfortunately, your reservation request for ${roomName} from ${checkIn} to ${checkOut} has been rejected.\n\nPlease contact us if you have any questions or would like to make a new reservation.\n\nBest regards,\nAurora Hotel`;
+              htmlBody = `<p>Dear ${userName},</p><p>Unfortunately, your reservation request for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>rejected</strong>.</p><p>Please contact us if you have any questions or would like to make a new reservation.</p><p>Best regards,<br/>Aurora Hotel</p>`;
+            } else if (status === 'Cancelled') {
+              subject = `Reservation Cancelled - ${roomName}`;
+              textBody = `Dear ${userName},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been cancelled by the administration.\n\nIf you have any questions, please contact us.\n\nBest regards,\nAurora Hotel`;
+              htmlBody = `<p>Dear ${userName},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>cancelled</strong> by the administration.</p><p>If you have any questions, please contact us.</p><p>Best regards,<br/>Aurora Hotel</p>`;
+            }
+
+            await mailTransporter.sendMail({
+              from: `"Aurora Hotel" <${HOTEL_EMAIL}>`,
+              to: userEmail,
+              subject: subject,
+              text: textBody,
+              html: htmlBody
+            });
+          } catch (emailError) {
+            console.error('Failed to send status update email:', emailError);
+            // Don't fail the request if email fails
+          }
+        }
+      }
+      
+      // Emit real-time update to all connected clients
+      io.emit('reservation-status-updated', {
+        reservationId,
+        status,
+        reservation: updatedReservation
+      });
+
+      res.json(updatedReservation);
     } catch (error: any) {
       console.error('Update reservation status error:', error);
       res
@@ -928,7 +1015,16 @@ app.post(
         await logAudit(req.user.userId, `Changed room status to ${status}`, 'Room', roomId);
       }
 
-      res.json(result.recordset[0]);
+      const updatedRoom = result.recordset[0];
+      
+      // Emit real-time update to all connected clients
+      io.emit('room-status-updated', {
+        roomId,
+        status,
+        room: updatedRoom
+      });
+
+      res.json(updatedRoom);
     } catch (error: any) {
       console.error('Update room status error:', error);
       res
@@ -1185,6 +1281,7 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res) 
                r.Notes,
                r.CreatedAt,
                r.CanceledAt,
+               r.CanceledBy,
                rm.Name AS RoomName,
                rm.Type AS RoomType,
                rm.BasePrice
@@ -1234,7 +1331,12 @@ app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthReq
       return res.status(400).json({ error: `Cannot cancel a reservation with status: ${reservation.Status}` });
     }
 
-    // Update status to Cancelled and set CanceledAt timestamp
+    // Don't allow users to cancel approved reservations
+    if (reservation.Status === 'Approved') {
+      return res.status(400).json({ error: 'Cannot cancel an approved reservation. Please contact support.' });
+    }
+
+    // Update status to Cancelled and set CanceledAt timestamp and CanceledBy
     const updateResult = await pool
       .request()
       .input('id', sql.Int, reservationId)
@@ -1242,12 +1344,22 @@ app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthReq
         UPDATE [dbo].[Reservations]
         SET Status = 'Cancelled',
             CanceledAt = GETDATE(),
+            CanceledBy = 'User',
             UpdatedAt = GETDATE()
         WHERE Id = @id;
         SELECT * FROM [dbo].[Reservations] WHERE Id = @id;
       `);
 
-    res.json(updateResult.recordset[0]);
+    const cancelledReservation = updateResult.recordset[0];
+    
+    // Emit real-time update to all connected clients
+    io.emit('reservation-status-updated', {
+      reservationId,
+      status: 'Cancelled',
+      reservation: cancelledReservation
+    });
+
+    res.json(cancelledReservation);
   } catch (error: any) {
     console.error('Cancel reservation error:', error);
     res.status(500).json({ error: 'Failed to cancel reservation', details: error.message });
@@ -1502,9 +1614,19 @@ initializeStorageBuckets()
     console.log('⚠ Continuing without storage functionality...');
   });
 
-const server = app.listen(port, () => {
+// WebSocket connection handling
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+  
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+httpServer.listen(port, () => {
   console.log(`API server listening on http://localhost:${port}`);
   console.log('✓ MSSQL database connection ready');
   console.log('✓ Supabase storage configured (storage only)');
+  console.log('✓ WebSocket server ready');
 });
 

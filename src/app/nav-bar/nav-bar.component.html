@@ -1,20 +1,29 @@
 <nav class="navbar" [class.hidden]="!isNavbarVisible">
   <div class="navbar-content">
     <div class="logo">
-      <a routerLink="/">
+      <a routerLink="/" (click)="closeMobileMenu()">
         <img src="/images/hotel-logo.png" alt="Aurora Hotel" class="logo-image">
       </a>
     </div>
+    
+    <!-- Hamburger Menu Button -->
+    <button class="hamburger-menu" (click)="toggleMobileMenu()" [class.active]="showMobileMenu" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <!-- Desktop Navigation -->
     <div class="nav-links">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">{{ 'nav.home' | translate }}</a>
-      <a routerLink="/about" routerLinkActive="active">{{ 'nav.about' | translate }}</a>
-      <a routerLink="/booking" routerLinkActive="active">{{ 'nav.booking' | translate }}</a>
-      <a routerLink="/contact" routerLinkActive="active">{{ 'nav.contact' | translate }}</a>
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="closeMobileMenu()">{{ 'nav.home' | translate }}</a>
+      <a routerLink="/about" routerLinkActive="active" (click)="closeMobileMenu()">{{ 'nav.about' | translate }}</a>
+      <a routerLink="/booking" routerLinkActive="active" (click)="closeMobileMenu()">{{ 'nav.booking' | translate }}</a>
+      <a routerLink="/contact" routerLinkActive="active" (click)="closeMobileMenu()">{{ 'nav.contact' | translate }}</a>
     </div>
     <div class="auth-links">
       <ng-container *ngIf="!isAuthenticated">
-        <a routerLink="/login" routerLinkActive="active" class="auth-link">Sign In</a>
-        <a routerLink="/register" routerLinkActive="active" class="auth-link auth-link-primary">Register</a>
+        <a routerLink="/login" routerLinkActive="active" class="auth-link">{{ 'nav.signIn' | translate }}</a>
+        <a routerLink="/register" routerLinkActive="active" class="auth-link auth-link-primary">{{ 'nav.register' | translate }}</a>
       </ng-container>
       <ng-container *ngIf="isAuthenticated">
         <div class="user-menu">
@@ -56,6 +65,66 @@
           type="button">
           <img src="/images/flags/bg-flag.png" alt="Bulgarian" class="flag-image">
           <span class="lang-code">BG</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu Overlay -->
+  <div class="mobile-menu-overlay" [class.active]="showMobileMenu" (click)="closeMobileMenu()"></div>
+  
+  <!-- Mobile Menu Sidebar -->
+  <div class="mobile-menu" [class.active]="showMobileMenu">
+    <div class="mobile-menu-header">
+      <h3>Aurora Hotel</h3>
+      <button class="mobile-menu-close" (click)="closeMobileMenu()">&times;</button>
+    </div>
+    <div class="mobile-menu-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" (click)="closeMobileMenu()">{{ 'nav.home' | translate }}</a>
+      <a routerLink="/about" routerLinkActive="active" (click)="closeMobileMenu()">{{ 'nav.about' | translate }}</a>
+      <a routerLink="/booking" routerLinkActive="active" (click)="closeMobileMenu()">{{ 'nav.booking' | translate }}</a>
+      <a routerLink="/contact" routerLinkActive="active" (click)="closeMobileMenu()">{{ 'nav.contact' | translate }}</a>
+      
+      <div class="mobile-menu-divider"></div>
+      
+      <ng-container *ngIf="!isAuthenticated">
+        <a routerLink="/login" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-auth-link">{{ 'nav.signIn' | translate }}</a>
+        <a routerLink="/register" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-auth-link mobile-auth-primary">{{ 'nav.register' | translate }}</a>
+      </ng-container>
+      
+      <ng-container *ngIf="isAuthenticated">
+        <button *ngIf="isAdmin" class="mobile-menu-item" type="button" routerLink="/admin" (click)="closeMobileMenu()">
+          Admin Panel
+        </button>
+        <button class="mobile-menu-item" type="button" routerLink="/profile" (click)="closeMobileMenu()">
+          My Profile
+        </button>
+        <button class="mobile-menu-item" type="button" routerLink="/my-reservations" (click)="closeMobileMenu()">
+          My Reservations
+        </button>
+        <button class="mobile-menu-item mobile-menu-logout" type="button" (click)="logout(); closeMobileMenu()">
+          Logout
+        </button>
+      </ng-container>
+      
+      <div class="mobile-menu-divider"></div>
+      
+      <div class="mobile-language-selector">
+        <button 
+          class="mobile-lang-btn" 
+          [class.active]="currentLang === 'en'"
+          (click)="changeLanguage('en')"
+          type="button">
+          <img src="/images/flags/en-flag.png" alt="English" class="flag-image">
+          <span>English</span>
+        </button>
+        <button 
+          class="mobile-lang-btn" 
+          [class.active]="currentLang === 'bg'"
+          (click)="changeLanguage('bg')"
+          type="button">
+          <img src="/images/flags/bg-flag.png" alt="Bulgarian" class="flag-image">
+          <span>Български</span>
         </button>
       </div>
     </div>

@@ -1,17 +1,17 @@
 <div class="admin-container">
-  <h1>Administration Panel</h1>
+  <h1>{{ translations.panel || 'Administration Panel' }}</h1>
 
   <div class="cards">
     <div class="card" *ngIf="summary">
-      <h2>Pending Reservations</h2>
+      <h2>{{ translations.pendingReservations || 'Pending Reservations' }}</h2>
       <p class="value">{{ summary.totalPendingReservations }}</p>
     </div>
     <div class="card" *ngIf="summary">
-      <h2>Occupancy Rate</h2>
+      <h2>{{ translations.occupancyRate || 'Occupancy Rate' }}</h2>
       <p class="value">{{ (summary.occupancyRate || 0) * 100 | number : '1.0-1' }}%</p>
     </div>
     <div class="card" *ngIf="summary">
-      <h2>Blocked Rooms</h2>
+      <h2>{{ translations.blockedRooms || 'Blocked Rooms' }}</h2>
       <p class="value">{{ summary.blockedRoomsCount }}</p>
     </div>
   </div>
@@ -21,97 +21,174 @@
   </div>
 
   <section class="section">
-    <h2>Pending Reservations</h2>
-    <div *ngIf="loading">Loading reservations...</div>
+    <h2>{{ translations.pendingReservations || 'Pending Reservations' }}</h2>
+    <div *ngIf="loading">{{ translations.loading || 'Loading reservations...' }}</div>
     <table *ngIf="!loading && pendingReservations.length" class="table">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>User</th>
-          <th>Room</th>
-          <th>Dates</th>
-          <th>Status</th>
-          <th>Actions</th>
+          <th>{{ translations.id || 'ID' }}</th>
+          <th>{{ translations.user || 'User' }}</th>
+          <th>{{ translations.room || 'Room' }}</th>
+          <th>{{ translations.dates || 'Dates' }}</th>
+          <th>{{ translations.status || 'Status' }}</th>
+          <th>{{ translations.actions || 'Actions' }}</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let r of pendingReservations">
-          <td>{{ r.Id }}</td>
-          <td>{{ r.Email }}</td>
-          <td>{{ r.RoomName }}</td>
-          <td>{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
-          <td>
+          <td attr.data-label="{{ translations.id || 'ID' }}">{{ r.Id }}</td>
+          <td attr.data-label="{{ translations.user || 'User' }}">{{ r.Email }}</td>
+          <td attr.data-label="{{ translations.room || 'Room' }}">{{ r.RoomName }}</td>
+          <td attr.data-label="{{ translations.dates || 'Dates' }}">{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
+          <td attr.data-label="{{ translations.status || 'Status' }}">
             <span [class.status-canceled]="r.Status === 'Cancelled'">{{ r.DisplayStatus || r.Status }}</span>
           </td>
-          <td>
+          <td attr.data-label="{{ translations.actions || 'Actions' }}">
             <button (click)="approveReservation(r.Id)" class="btn btn-approve">
-              Approve
+              {{ translations.approve || 'Approve' }}
             </button>
             <button (click)="rejectReservation(r.Id)" class="btn btn-reject">
-              Reject
+              {{ translations.reject || 'Reject' }}
             </button>
           </td>
         </tr>
       </tbody>
     </table>
-    <p *ngIf="!loading && !pendingReservations.length">No pending reservations.</p>
+    <p *ngIf="!loading && !pendingReservations.length">{{ translations.noPending || 'No pending reservations.' }}</p>
   </section>
 
   <section class="section">
-    <h2>Rooms & Availability</h2>
+    <h2>{{ translations.roomsAvailability || 'Rooms & Availability' }}</h2>
     <table *ngIf="rooms.length" class="table">
       <thead>
         <tr>
-          <th>Name</th>
-          <th>Type</th>
-          <th>Status</th>
-          <th>Visible</th>
-          <th>Currently Blocked</th>
+          <th>{{ translations.name || 'Name' }}</th>
+          <th>{{ translations.type || 'Type' }}</th>
+          <th>{{ translations.status || 'Status' }}</th>
+          <th>{{ translations.visible || 'Visible' }}</th>
+          <th>{{ translations.currentlyBlocked || 'Currently Blocked' }}</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let room of rooms">
-          <td>{{ room.Name }}</td>
-          <td>{{ room.Type }}</td>
-          <td>{{ room.Status }}</td>
-          <td>{{ room.VisibleToUsers ? 'Yes' : 'No' }}</td>
-          <td>{{ room.IsCurrentlyBlocked ? 'Yes' : 'No' }}</td>
+          <td attr.data-label="{{ translations.name || 'Name' }}">{{ room.Name }}</td>
+          <td attr.data-label="{{ translations.type || 'Type' }}">{{ room.Type }}</td>
+          <td attr.data-label="{{ translations.status || 'Status' }}">{{ room.Status }}</td>
+          <td attr.data-label="{{ translations.visible || 'Visible' }}">{{ room.VisibleToUsers ? (translations.yes || 'Yes') : (translations.no || 'No') }}</td>
+          <td attr.data-label="{{ translations.currentlyBlocked || 'Currently Blocked' }}">{{ room.IsCurrentlyBlocked ? (translations.yes || 'Yes') : (translations.no || 'No') }}</td>
         </tr>
       </tbody>
     </table>
-    <p *ngIf="!rooms.length">No rooms defined yet.</p>
+    <p *ngIf="!rooms.length">{{ translations.noRooms || 'No rooms defined yet.' }}</p>
   </section>
 
   <section class="section">
-    <h2>Reservation History</h2>
-    <table *ngIf="allReservations.length" class="table">
+    <h2>{{ translations.reservationHistory || 'Reservation History' }}</h2>
+    
+    <!-- Search Section -->
+    <div class="search-section">
+      <div class="search-group">
+        <label for="searchEmail">{{ translations.searchEmail || 'Search by Email:' }}</label>
+        <input 
+          type="text" 
+          id="searchEmail"
+          [(ngModel)]="searchEmail"
+          (input)="applyFilters()"
+          placeholder="Email address..."
+          class="search-input">
+      </div>
+      <div class="search-group">
+        <label for="searchDate">{{ translations.searchDate || 'Search by Date:' }}</label>
+        <input 
+          type="date" 
+          id="searchDate"
+          [(ngModel)]="searchDate"
+          (change)="applyFilters()"
+          class="search-input">
+      </div>
+      <div class="search-group">
+        <label for="searchTag">{{ translations.searchTag || 'Search by Status/Tag:' }}</label>
+        <input 
+          type="text" 
+          id="searchTag"
+          [(ngModel)]="searchTag"
+          (input)="applyFilters()"
+          placeholder="e.g., Approved, Completed..."
+          class="search-input">
+      </div>
+      <div class="search-group">
+        <label for="searchRoom">{{ translations.searchRoom || 'Search by Room:' }}</label>
+        <input 
+          type="text" 
+          id="searchRoom"
+          [(ngModel)]="searchRoom"
+          (input)="applyFilters()"
+          placeholder="Room name..."
+          class="search-input">
+      </div>
+      <button 
+        *ngIf="searchEmail || searchDate || searchTag || searchRoom" 
+        class="btn-clear" 
+        (click)="clearSearch()">
+        {{ translations.clearSearch || 'Clear Search' }}
+      </button>
+    </div>
+
+    <table *ngIf="filteredReservations.length" class="table">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>User / Guest</th>
-          <th>Room</th>
-          <th>Dates</th>
-          <th>Status</th>
-          <th>Actions</th>
+          <th>{{ translations.id || 'ID' }}</th>
+          <th>{{ translations.userGuest || 'User / Guest' }}</th>
+          <th>{{ translations.room || 'Room' }}</th>
+          <th>{{ translations.dates || 'Dates' }}</th>
+          <th>{{ translations.status || 'Status' }}</th>
+          <th>{{ translations.actions || 'Actions' }}</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let r of allReservations">
-          <td>{{ r.Id }}</td>
-          <td>{{ r.Email || (r.GuestFirstName + ' ' + r.GuestLastName) }}</td>
-          <td>{{ r.RoomName }}</td>
-          <td>{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
-          <td>{{ r.Status }}</td>
-          <td>
-            <button class="btn btn-approve" (click)="changeStatus(r.Id, 'Approved')">Approve</button>
-            <button class="btn btn-reject" (click)="changeStatus(r.Id, 'Rejected')">Reject</button>
-            <button class="btn" (click)="changeStatus(r.Id, 'Cancelled')">Cancel</button>
-            <button class="btn" (click)="changeStatus(r.Id, 'Completed')">Complete</button>
+        <tr *ngFor="let r of getPaginatedReservations()">
+          <td attr.data-label="{{ translations.id || 'ID' }}">{{ r.Id }}</td>
+          <td attr.data-label="{{ translations.userGuest || 'User / Guest' }}">{{ r.Email || (r.GuestFirstName + ' ' + r.GuestLastName) }}</td>
+          <td attr.data-label="{{ translations.room || 'Room' }}">{{ r.RoomName }}</td>
+          <td attr.data-label="{{ translations.dates || 'Dates' }}">{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
+          <td attr.data-label="{{ translations.status || 'Status' }}">{{ r.DisplayStatus || r.Status }}</td>
+          <td attr.data-label="{{ translations.actions || 'Actions' }}">
+            <button class="btn btn-approve" (click)="changeStatus(r.Id, 'Approved')">{{ translations.approve || 'Approve' }}</button>
+            <button class="btn btn-reject" (click)="changeStatus(r.Id, 'Rejected')">{{ translations.reject || 'Reject' }}</button>
+            <button class="btn btn-cancel" (click)="changeStatus(r.Id, 'Cancelled')">{{ translations.cancel || 'Cancel' }}</button>
+            <button class="btn btn-complete" (click)="changeStatus(r.Id, 'Completed')">{{ translations.complete || 'Complete' }}</button>
           </td>
         </tr>
       </tbody>
     </table>
-    <p *ngIf="!allReservations.length">No reservations yet.</p>
+    
+    <!-- Pagination -->
+    <div *ngIf="filteredReservations.length > 0" class="pagination">
+      <button 
+        class="pagination-btn" 
+        [disabled]="currentPage === 1"
+        (click)="goToPage(currentPage - 1)">
+        {{ translations.previous || 'Previous' }}
+      </button>
+      <span class="pagination-info">
+        {{ translations.page || 'Page' }} {{ currentPage }} {{ translations.of || 'of' }} {{ totalPages }} ({{ filteredReservations.length }} {{ translations.total || 'total' }})
+      </span>
+      <button 
+        class="pagination-btn" 
+        [disabled]="currentPage === totalPages"
+        (click)="goToPage(currentPage + 1)">
+        {{ translations.next || 'Next' }}
+      </button>
+    </div>
+    
+    <p *ngIf="!filteredReservations.length && !loading">
+      <span *ngIf="searchEmail || searchDate || searchTag || searchRoom">
+        {{ translations.noResults || 'No reservations found matching your search criteria.' }}
+      </span>
+      <span *ngIf="!searchEmail && !searchDate && !searchTag && !searchRoom">
+        {{ translations.noReservations || 'No reservations yet.' }}
+      </span>
+    </p>
   </section>
 </div>
 
