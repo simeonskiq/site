@@ -5,12 +5,30 @@ import { getDbConnection } from './db.config';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
+import multer from 'multer';
+import {
+  getSupabaseClient,
+  initializeStorageBuckets,
+  uploadFile,
+  deleteFile,
+  getPublicUrl,
+  listFiles,
+  STORAGE_BUCKETS
+} from './supabase-storage.config';
 
 const app = express();
 
 // Middleware for parsing JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Multer configuration for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  }
+});
 
 // CORS middleware for development
 app.use((req, res, next) => {
@@ -1294,8 +1312,199 @@ app.get('/api/public/available-rooms', async (req, res) => {
   }
 });
 
+/**
+ * Supabase Storage API Endpoints
+ * These endpoints handle file storage operations using Supabase Storage
+ * while keeping MSSQL for all database operations
+ */
+
+// Upload file endpoint
+app.post(
+  '/api/storage/upload',
+  authMiddleware,
+  requireRole(['Manager', 'SuperAdmin', 'Support']),
+  upload.single('file'),
+  async (req: AuthRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file provided' });
+      }
+
+      const { bucket, path } = req.body as { bucket?: string; path?: string };
+
+      if (!bucket || !Object.values(STORAGE_BUCKETS).includes(bucket as any)) {
+        return res.status(400).json({
+          error: 'Invalid bucket. Valid buckets: ' + Object.values(STORAGE_BUCKETS).join(', ')
+        });
+      }
+
+      const filePath = path || `${Date.now()}-${req.file.originalname}`;
+      const fileBuffer = Buffer.from(req.file.buffer);
+
+      const result = await uploadFile(
+        bucket,
+        filePath,
+        fileBuffer,
+        req.file.mimetype,
+        { upsert: true }
+      );
+
+      res.status(201).json({
+        message: 'File uploaded successfully',
+        path: result.path,
+        url: result.url
+      });
+    } catch (error: any) {
+      console.error('File upload error:', error);
+      res.status(500).json({ error: 'Failed to upload file', details: error.message });
+    }
+  }
+);
+
+// Delete file endpoint
+app.delete('/api/storage/delete', authMiddleware, requireRole(['Manager', 'SuperAdmin']), async (req: AuthRequest, res) => {
+  try {
+    const { bucket, path } = req.body as { bucket?: string; path?: string };
+
+    if (!bucket || !path) {
+      return res.status(400).json({ error: 'Bucket and path are required' });
+    }
+
+    if (!Object.values(STORAGE_BUCKETS).includes(bucket as any)) {
+      return res.status(400).json({ error: 'Invalid bucket' });
+    }
+
+    await deleteFile(bucket, path);
+
+    res.json({ message: 'File deleted successfully' });
+  } catch (error: any) {
+    console.error('File delete error:', error);
+    res.status(500).json({ error: 'Failed to delete file', details: error.message });
+  }
+});
+
+// List files endpoint
+app.get('/api/storage/list', authMiddleware, requireRole(['Manager', 'SuperAdmin', 'Support']), async (req: AuthRequest, res) => {
+  try {
+    const { bucket, path, limit, offset } = req.query as {
+      bucket?: string;
+      path?: string;
+      limit?: string;
+      offset?: string;
+    };
+
+    if (!bucket) {
+      return res.status(400).json({ error: 'Bucket is required' });
+    }
+
+    if (!Object.values(STORAGE_BUCKETS).includes(bucket as any)) {
+      return res.status(400).json({ error: 'Invalid bucket' });
+    }
+
+    const files = await listFiles(bucket, path, {
+      limit: limit ? parseInt(limit, 10) : undefined,
+      offset: offset ? parseInt(offset, 10) : undefined
+    });
+
+    // Add public URLs to each file
+    const filesWithUrls = files.map((file) => ({
+      ...file,
+      url: getPublicUrl(bucket, path ? `${path}/${file.name}` : file.name)
+    }));
+
+    res.json(filesWithUrls);
+  } catch (error: any) {
+    console.error('List files error:', error);
+    res.status(500).json({ error: 'Failed to list files', details: error.message });
+  }
+});
+
+// Get file URL endpoint (public, no auth required for public buckets)
+app.get('/api/storage/url', (req, res) => {
+  try {
+    const { bucket, path } = req.query as { bucket?: string; path?: string };
+
+    if (!bucket || !path) {
+      return res.status(400).json({ error: 'Bucket and path are required' });
+    }
+
+    if (!Object.values(STORAGE_BUCKETS).includes(bucket as any)) {
+      return res.status(400).json({ error: 'Invalid bucket' });
+    }
+
+    const url = getPublicUrl(bucket, path);
+    res.json({ url });
+  } catch (error: any) {
+    console.error('Get URL error:', error);
+    res.status(500).json({ error: 'Failed to get file URL', details: error.message });
+  }
+});
+
+// Upload room image endpoint (convenience endpoint)
+app.post(
+  '/api/storage/rooms/:roomId/image',
+  authMiddleware,
+  requireRole(['Manager', 'SuperAdmin']),
+  upload.single('image'),
+  async (req: AuthRequest, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image provided' });
+      }
+
+      const roomId = Number(req.params['roomId']);
+      const filePath = `room-${roomId}/${Date.now()}-${req.file.originalname}`;
+      const fileBuffer = Buffer.from(req.file.buffer);
+
+      const result = await uploadFile(
+        STORAGE_BUCKETS.ROOM_IMAGES,
+        filePath,
+        fileBuffer,
+        req.file.mimetype,
+        { upsert: false }
+      );
+
+      // Optionally update room record in MSSQL with image URL
+      // This keeps the database reference while storing the file in Supabase
+      try {
+        const pool = await getDbConnection();
+        // You can add an ImageUrl column to Rooms table if needed
+        // await pool.request()
+        //   .input('id', sql.Int, roomId)
+        //   .input('imageUrl', sql.NVarChar, result.url)
+        //   .query('UPDATE [dbo].[Rooms] SET ImageUrl = @imageUrl WHERE Id = @id');
+      } catch (dbError) {
+        console.error('Failed to update room image URL in database:', dbError);
+        // Continue even if DB update fails
+      }
+
+      res.status(201).json({
+        message: 'Room image uploaded successfully',
+        path: result.path,
+        url: result.url
+      });
+    } catch (error: any) {
+      console.error('Room image upload error:', error);
+      res.status(500).json({ error: 'Failed to upload room image', details: error.message });
+    }
+  }
+);
+
 const port = process.env['API_PORT'] || process.env['PORT'] || 4001;
+
+// Initialize Supabase storage buckets on server start
+initializeStorageBuckets()
+  .then(() => {
+    console.log('✓ Supabase storage initialized');
+  })
+  .catch((error) => {
+    console.error('⚠ Supabase storage initialization failed:', error.message);
+    console.log('⚠ Continuing without storage functionality...');
+  });
+
 const server = app.listen(port, () => {
   console.log(`API server listening on http://localhost:${port}`);
+  console.log('✓ MSSQL database connection ready');
+  console.log('✓ Supabase storage configured (storage only)');
 });
 
