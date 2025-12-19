@@ -23,7 +23,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // JWT secret key (in production, use environment variable)
-const JWT_SECRET = process.env['JWT_SECRET'] || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env['JWT_SECRET'] || 'npUtks96Wbo1f8mJYd2z1A/79vQPQIaDzbBcQe3GEnsAgFB3xP4rMebrMRYCVw3BiHZfe2LzEFY5F0IXgCZOhA==';
 
 /**
  * API Routes for Authentication
