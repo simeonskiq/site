@@ -162,7 +162,9 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
 app.post('/api/auth/login', async (req, res): Promise<void> => {
   console.log('[LOGIN] POST /api/auth/login received', { 
     method: req.method, 
-    path: req.path, 
+    path: req.path,
+    url: req.url,
+    originalUrl: req.originalUrl,
     hasBody: !!req.body,
     bodyKeys: req.body ? Object.keys(req.body) : []
   });
@@ -503,6 +505,22 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
 });
 
 /**
+ * Catch-all for unmatched API routes - must come after all API route definitions
+ * This ensures API routes that don't match return 404, not Angular router errors
+ * Note: This will only match if no previous route handler matched
+ */
+app.all('/api/*', (req, res) => {
+  // If we reach here, the API route wasn't matched by any handler above
+  console.log('[API 404] Unmatched API route:', req.method, req.path);
+  res.status(404).json({ 
+    error: 'API endpoint not found', 
+    path: req.path, 
+    method: req.method,
+    message: `No ${req.method} handler found for ${req.path}`
+  });
+});
+
+/**
  * Serve static files from /browser
  * Exclude /api routes from static file serving
  */
@@ -519,25 +537,15 @@ app.use((req, res, next) => {
 });
 
 /**
- * Catch-all for unmatched API routes - must come after all API route definitions
- * This ensures API routes that don't match return 404, not Angular router errors
- */
-app.all('/api/*', (req, res) => {
-  console.log('[API 404] Unmatched API route:', req.method, req.path);
-  res.status(404).json({ 
-    error: 'API endpoint not found', 
-    path: req.path, 
-    method: req.method,
-    message: `No ${req.method} handler found for ${req.path}`
-  });
-});
-
-/**
  * Handle all other requests by rendering the Angular application.
  * This should be last to catch all non-API routes.
  * All /api routes should have been handled by the API route handlers above.
  */
 app.use((req, res, next) => {
+  // Skip Angular handler for API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
   angularApp
     .handle(req)
     .then((response) =>
