@@ -34,11 +34,27 @@ app.use((req, res, next): void => {
   next();
 });
 
-// Middleware for parsing JSON
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware for parsing JSON - CRITICAL: Must be before route handlers
+// This ensures POST request bodies are parsed correctly
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// CRITICAL: Log all POST requests to debug Vercel routing issues
+app.use((req, res, next) => {
+  if (req.method === 'POST' && (req.path.startsWith('/api/') || req.url?.startsWith('/api/'))) {
+    console.log('[POST REQUEST DEBUG]', {
+      method: req.method,
+      path: req.path,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      headers: req.headers
+    });
+  }
+  next();
+});
 
 // Debug middleware for API routes (can be removed in production)
+// IMPORTANT: This must come BEFORE route definitions to log all API requests
 app.use('/api/*', (req, res, next) => {
   console.log(`[API Middleware] ${req.method} ${req.path} ${req.url} ${req.originalUrl}`);
   next();
@@ -159,6 +175,7 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
 });
 
 // Login endpoint - must be defined before catch-all routes
+// Using app.post() explicitly to ensure POST method is handled
 app.post('/api/auth/login', async (req, res): Promise<void> => {
   console.log('[LOGIN HANDLER] POST /api/auth/login received', { 
     method: req.method, 
@@ -513,16 +530,22 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
  * Catch-all for unmatched API routes - must come after all API route definitions
  * This ensures API routes that don't match return 404, not Angular router errors
  * Note: This will only match if no previous route handler matched
+ * IMPORTANT: Use app.use instead of app.all to ensure it catches all methods
  */
+// Catch-all for unmatched API routes - must NOT call next() to prevent falling through to Angular handler
+// Using app.all() to explicitly match all HTTP methods
+// Catch-all for unmatched API routes - CRITICAL: Must use app.all() not app.use()
+// app.all() matches all HTTP methods but only if no previous route matched
 app.all('/api/*', (req, res) => {
   // If we reach here, the API route wasn't matched by any handler above
-  console.log('[API 404] Unmatched API route:', req.method, req.path, req.url);
+  console.log('[API 404] Unmatched API route:', req.method, req.path, req.url, req.originalUrl);
   res.status(404).json({ 
     error: 'API endpoint not found', 
     path: req.path, 
     method: req.method,
     message: `No ${req.method} handler found for ${req.path}`
   });
+  // DO NOT call next() - this is the final handler for unmatched API routes
 });
 
 /**
@@ -547,17 +570,38 @@ app.use((req, res, next) => {
  * All /api routes should have been handled by the API route handlers above.
  */
 app.use((req, res, next) => {
-  // Skip Angular handler for API routes - if we reach here with an API route, something is wrong
-  if (req.path.startsWith('/api/') || req.url.startsWith('/api/')) {
-    console.log('[API ERROR] API route reached Angular handler - route not matched!', req.method, req.path, req.url);
-    res.status(405).json({ 
-      error: 'Method not allowed',
+  // CRITICAL: Skip Angular handler for ALL API routes
+  // If an API route reaches here, it means no Express route matched it
+  const isApiRoute = req.path.startsWith('/api/') || 
+                     req.url?.startsWith('/api/') || 
+                     req.originalUrl?.startsWith('/api/');
+  
+  if (isApiRoute) {
+    // This should never happen - all API routes should be handled by Express above
+    // Return 404 (not 405) since the route simply wasn't found
+    console.error('[API ERROR] API route reached Angular handler - Express route did not match!', {
+      method: req.method,
+      path: req.path,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      registeredRoutes: [
+        'POST /api/auth/register',
+        'POST /api/auth/login',
+        'GET /api/health',
+        'GET /api/test',
+        'POST /api/test'
+      ]
+    });
+    res.status(404).json({ 
+      error: 'API endpoint not found',
       path: req.path,
       method: req.method,
-      message: 'API route not properly handled - this indicates a routing issue'
+      message: 'API route not properly handled - check route registration'
     });
     return;
   }
+  
+  // Only handle non-API routes with Angular SSR
   angularApp
     .handle(req)
     .then((response) =>
@@ -594,5 +638,9 @@ console.log('[SERVER INIT] Registered API routes:', [
 
 /**
  * Request handler used by the Angular CLI (for dev-server and during build) or Vercel.
+ * 
+ * IMPORTANT: On Vercel, this handler wraps the Express app, and POST requests
+ * must be handled by Express routes before Angular SSR processes them.
+ * The route order in the Express app above ensures this happens.
  */
 export const reqHandler = createNodeRequestHandler(app);
