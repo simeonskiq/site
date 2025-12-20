@@ -19,7 +19,7 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 // CORS middleware for API routes
-app.use((req, res, next) => {
+app.use((req, res, next): void => {
   // Only apply CORS to API routes
   if (req.path.startsWith('/api/')) {
     res.header('Access-Control-Allow-Origin', '*');
@@ -28,7 +28,8 @@ app.use((req, res, next) => {
     
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
+      res.sendStatus(200);
+      return;
     }
   }
   next();
@@ -79,17 +80,19 @@ const authMiddleware: express.RequestHandler = (
  */
 
 // Registration endpoint
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', async (req, res): Promise<void> => {
   try {
     const { email, password, firstName, lastName, phone } = req.body;
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      res.status(400).json({ error: 'Email and password are required' });
+      return;
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+      res.status(400).json({ error: 'Password must be at least 6 characters long' });
+      return;
     }
 
     const pool = await getDbConnection();
@@ -101,7 +104,8 @@ app.post('/api/auth/register', async (req, res) => {
       .query(checkUserQuery);
 
     if (checkResult.recordset.length > 0) {
-      return res.status(409).json({ error: 'User with this email already exists' });
+      res.status(409).json({ error: 'User with this email already exists' });
+      return;
     }
 
     // Hash password
@@ -142,22 +146,21 @@ app.post('/api/auth/register', async (req, res) => {
       },
       token
     });
-    return;
   } catch (error: any) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
-    return;
   }
 });
 
 // Login endpoint
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res): Promise<void> => {
   try {
     const { email, password } = req.body;
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      res.status(400).json({ error: 'Email and password are required' });
+      return;
     }
 
     const pool = await getDbConnection();
@@ -174,7 +177,8 @@ app.post('/api/auth/login', async (req, res) => {
       .query(findUserQuery);
 
     if (result.recordset.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
     }
 
     const user = result.recordset[0];
@@ -183,7 +187,8 @@ app.post('/api/auth/login', async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.PasswordHash);
 
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
     }
 
     // Generate JWT token
@@ -207,26 +212,25 @@ app.post('/api/auth/login', async (req, res) => {
       },
       token
     });
-    return;
   } catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
-    return;
   }
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req, res): void => {
   res.json({ status: 'ok', message: 'API server is running' });
 });
 
 /**
  * User profile endpoints
  */
-app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
+app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const pool = await getDbConnection();
@@ -240,7 +244,8 @@ app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
       `);
 
     if (!result.recordset.length) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     const user = result.recordset[0];
@@ -258,10 +263,11 @@ app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-app.put('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
+app.put('/api/user/profile', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const { firstName, lastName, phone } = req.body as {
@@ -302,15 +308,17 @@ app.put('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res) => {
+app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const { email } = req.body as { email?: string };
     if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+      res.status(400).json({ error: 'Email is required' });
+      return;
     }
 
     const pool = await getDbConnection();
@@ -323,7 +331,8 @@ app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res) => {
         `SELECT Id FROM [dbo].[Users] WHERE Email = @email AND Id <> ${req.user.userId}`
       );
     if (exists.recordset.length) {
-      return res.status(409).json({ error: 'Email already in use' });
+      res.status(409).json({ error: 'Email already in use' });
+      return;
     }
 
     const result = await pool
@@ -352,10 +361,11 @@ app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res) => {
+app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const { currentPassword, newPassword } = req.body as {
@@ -364,12 +374,14 @@ app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res) => {
     };
 
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Current and new password are required' });
+      res.status(400).json({ error: 'Current and new password are required' });
+      return;
     }
     if (newPassword.length < 6) {
-      return res
+      res
         .status(400)
         .json({ error: 'New password must be at least 6 characters long' });
+      return;
     }
 
     const pool = await getDbConnection();
@@ -383,13 +395,15 @@ app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res) => {
       `);
 
     if (!userResult.recordset.length) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     const dbUser = userResult.recordset[0];
     const isValid = await bcrypt.compare(currentPassword, dbUser.PasswordHash);
     if (!isValid) {
-      return res.status(400).json({ error: 'Current password is incorrect' });
+      res.status(400).json({ error: 'Current password is incorrect' });
+      return;
     }
 
     const newHash = await bcrypt.hash(newPassword, 10);
@@ -413,10 +427,11 @@ app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res) => {
 /**
  * Authenticated endpoint: get reservations for the logged-in user.
  */
-app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res) => {
+app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const pool = await getDbConnection();
@@ -485,7 +500,7 @@ app.use('/**', (req, res, next) => {
 if (isMainModule(import.meta.url)) {
   const port = process.env['PORT'] || 4000;
   app.listen(port, () => {
-    console.log(`Node Express server listening on https://jlsmvmycvnkfjqlicdrl.supabase.co${port}`);
+    console.log(`Node Express server listening on http://localhost:${port}`);
   });
 }
 
