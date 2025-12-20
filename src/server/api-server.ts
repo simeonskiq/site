@@ -593,41 +593,42 @@ app.get(
   requireRole(['Manager', 'SuperAdmin', 'Support']),
   async (req: AuthRequest, res) => {
     try {
-      const pool = await getDbConnection();
+      const supabase = await getDbConnection();
 
-      const [pendingReservations, occupancy, blockedRooms] = await Promise.all([
-        pool
-          .request()
-          .query(
-            `SELECT COUNT(*) AS TotalPending FROM [dbo].[Reservations] WHERE [Status] = 'Pending'`
-          ),
-        pool
-          .request()
-          .query(
-            `SELECT 
-               CAST(
-                 COUNT(CASE WHEN res.[Status] IN ('Approved', 'Completed') THEN 1 END) AS FLOAT
-               ) / NULLIF(COUNT(r.Id), 0) AS OccupancyRate
-             FROM [dbo].[Rooms] r
-             LEFT JOIN [dbo].[Reservations] res ON res.RoomId = r.Id 
-               AND res.[Status] IN ('Approved','Completed') 
-               AND res.StartDate <= CAST(GETDATE() AS DATE)
-               AND res.EndDate >= CAST(GETDATE() AS DATE)`
-          ),
-        pool
-          .request()
-          .query(
-            `SELECT COUNT(DISTINCT RoomId) AS BlockedRoomsCount 
-             FROM [dbo].[RoomBlocks] 
-             WHERE IsPermanent = 1 
-                OR (StartDate <= CAST(GETDATE() AS DATE) AND EndDate >= CAST(GETDATE() AS DATE))`
-          )
+      const [pendingReservations, reservations, rooms, blockedRooms] = await Promise.all([
+        supabase
+          .from('reservations')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'Pending'),
+        supabase
+          .from('reservations')
+          .select('id, status, start_date, end_date, room_id')
+          .in('status', ['Approved', 'Completed']),
+        supabase
+          .from('rooms')
+          .select('id'),
+        supabase
+          .from('room_blocks')
+          .select('room_id, is_permanent, start_date, end_date')
       ]);
 
+      const today = new Date().toISOString().split('T')[0];
+      const activeReservations = reservations.data?.filter(r => 
+        r.start_date <= today && r.end_date >= today
+      ) || [];
+      const occupancyRate = rooms.data && rooms.data.length > 0 
+        ? activeReservations.length / rooms.data.length 
+        : 0;
+
+      const activeBlocks = blockedRooms.data?.filter(b => 
+        b.is_permanent || (b.start_date <= today && b.end_date >= today)
+      ) || [];
+      const uniqueBlockedRooms = new Set(activeBlocks.map(b => b.room_id));
+
       res.json({
-        totalPendingReservations: pendingReservations.recordset[0]?.TotalPending || 0,
-        occupancyRate: occupancy.recordset[0]?.OccupancyRate || 0,
-        blockedRoomsCount: blockedRooms.recordset[0]?.BlockedRoomsCount || 0
+        totalPendingReservations: pendingReservations.count || 0,
+        occupancyRate: occupancyRate,
+        blockedRoomsCount: uniqueBlockedRooms.size
       });
     } catch (error: any) {
       console.error('Dashboard error:', error);
@@ -643,49 +644,83 @@ app.get(
   requireRole(['Manager', 'SuperAdmin', 'Support']),
   async (req: AuthRequest, res) => {
     try {
-      const pool = await getDbConnection();
+      const supabase = await getDbConnection();
       const { status, userId, roomId } = req.query;
 
-      let query = `
-        SELECT r.Id, r.UserId, r.RoomId, r.StartDate, r.EndDate, r.Status, r.TotalPrice,
-               r.GuestFirstName, r.GuestLastName, r.GuestEmail, r.GuestPhone,
-               r.CreatedAt, r.CanceledAt, r.CanceledBy,
-               COALESCE(u.Email, r.GuestEmail) AS Email,
-               COALESCE(u.FirstName, r.GuestFirstName) AS FirstName,
-               COALESCE(u.LastName, r.GuestLastName) AS LastName,
-               rm.Name AS RoomName,
-               CASE 
-                 WHEN r.Status = 'Cancelled' AND r.CanceledBy = 'User' THEN 'Canceled by user'
-                 WHEN r.Status = 'Cancelled' AND r.CanceledBy = 'Admin' THEN 'Canceled by admin'
-                 ELSE r.Status
-               END AS DisplayStatus
-        FROM [dbo].[Reservations] r
-        LEFT JOIN [dbo].[Users] u ON u.Id = r.UserId
-        LEFT JOIN [dbo].[Rooms] rm ON rm.Id = r.RoomId
-        WHERE 1 = 1
-      `;
-
-      const request = pool.request();
+      let query = supabase
+        .from('reservations')
+        .select(`
+          id,
+          user_id,
+          room_id,
+          start_date,
+          end_date,
+          status,
+          total_price,
+          guest_first_name,
+          guest_last_name,
+          guest_email,
+          guest_phone,
+          created_at,
+          canceled_at,
+          canceled_by,
+          users:user_id (
+            email,
+            first_name,
+            last_name
+          ),
+          rooms:room_id (
+            name
+          )
+        `)
+        .order('created_at', { ascending: false });
 
       if (status) {
-        query += ' AND r.Status = @status';
-        request.input('status', sql.NVarChar, status);
+        query = query.eq('status', status as string);
       }
 
       if (userId) {
-        query += ' AND r.UserId = @userId';
-        request.input('userId', sql.Int, Number(userId));
+        query = query.eq('user_id', Number(userId));
       }
 
       if (roomId) {
-        query += ' AND r.RoomId = @roomId';
-        request.input('roomId', sql.Int, Number(roomId));
+        query = query.eq('room_id', Number(roomId));
       }
 
-      query += ' ORDER BY r.CreatedAt DESC';
+      const { data: reservations, error } = await query;
 
-      const result = await request.query(query);
-      res.json(result.recordset);
+      if (error) {
+        throw error;
+      }
+
+      // Transform data to match expected format
+      const transformed = reservations?.map((r: any) => ({
+        Id: r.id,
+        UserId: r.user_id,
+        RoomId: r.room_id,
+        StartDate: r.start_date,
+        EndDate: r.end_date,
+        Status: r.status,
+        TotalPrice: r.total_price,
+        GuestFirstName: r.guest_first_name,
+        GuestLastName: r.guest_last_name,
+        GuestEmail: r.guest_email,
+        GuestPhone: r.guest_phone,
+        CreatedAt: r.created_at,
+        CanceledAt: r.canceled_at,
+        CanceledBy: r.canceled_by,
+        Email: r.users?.email || r.guest_email,
+        FirstName: r.users?.first_name || r.guest_first_name,
+        LastName: r.users?.last_name || r.guest_last_name,
+        RoomName: r.rooms?.name,
+        DisplayStatus: r.status === 'Cancelled' && r.canceled_by === 'User' 
+          ? 'Canceled by user'
+          : r.status === 'Cancelled' && r.canceled_by === 'Admin'
+          ? 'Canceled by admin'
+          : r.status
+      })) || [];
+
+      res.json(transformed);
     } catch (error: any) {
       console.error('List reservations error:', error);
       res
@@ -712,26 +747,28 @@ app.post(
     }
 
     try {
-      const pool = await getDbConnection();
+      const supabase = await getDbConnection();
       
-      // If canceling, set CanceledBy to 'Admin'
-      let updateQuery = `UPDATE [dbo].[Reservations]
-           SET Status = @status, UpdatedAt = GETDATE()`;
+      // Prepare update data
+      const updateData: any = {
+        status: status,
+        updated_at: new Date().toISOString()
+      };
       
       if (status === 'Cancelled') {
-        updateQuery += `, CanceledBy = 'Admin', CanceledAt = GETDATE()`;
+        updateData.canceled_by = 'Admin';
+        updateData.canceled_at = new Date().toISOString();
       }
       
-      updateQuery += ` WHERE Id = @id;
-           SELECT * FROM [dbo].[Reservations] WHERE Id = @id;`;
-      
-      const result = await pool
-        .request()
-        .input('id', sql.Int, reservationId)
-        .input('status', sql.NVarChar, status)
-        .query(updateQuery);
+      // Update reservation
+      const { data: updatedReservation, error: updateError } = await supabase
+        .from('reservations')
+        .update(updateData)
+        .eq('id', reservationId)
+        .select()
+        .single();
 
-      if (result.recordset.length === 0) {
+      if (updateError || !updatedReservation) {
         return res.status(404).json({ error: 'Reservation not found' });
       }
 
@@ -743,35 +780,39 @@ app.post(
           reservationId
         );
       }
-
-      const updatedReservation = result.recordset[0];
       
       // Get user email for notification
-      const userResult = await pool
-        .request()
-        .input('reservationId', sql.Int, reservationId)
-        .query(`
-          SELECT COALESCE(u.Email, r.GuestEmail) AS Email,
-                 COALESCE(u.FirstName, r.GuestFirstName) AS FirstName,
-                 COALESCE(u.LastName, r.GuestLastName) AS LastName,
-                 r.RoomId,
-                 rm.Name AS RoomName,
-                 r.StartDate,
-                 r.EndDate
-          FROM [dbo].[Reservations] r
-          LEFT JOIN [dbo].[Users] u ON u.Id = r.UserId
-          LEFT JOIN [dbo].[Rooms] rm ON rm.Id = r.RoomId
-          WHERE r.Id = @reservationId
-        `);
+      const { data: reservationData, error: fetchError } = await supabase
+        .from('reservations')
+        .select(`
+          user_id,
+          room_id,
+          start_date,
+          end_date,
+          guest_email,
+          guest_first_name,
+          guest_last_name,
+          users:user_id (
+            email,
+            first_name,
+            last_name
+          ),
+          rooms:room_id (
+            name
+          )
+        `)
+        .eq('id', reservationId)
+        .single();
 
       // Send email notification if status changed to Approved, Rejected, or Cancelled
-      if (userResult.recordset.length > 0 && mailTransporter) {
-        const userData = userResult.recordset[0];
-        const userEmail = userData.Email;
-        const userName = `${userData.FirstName || ''} ${userData.LastName || ''}`.trim() || 'Guest';
-        const roomName = userData.RoomName || 'Room';
-        const checkIn = new Date(userData.StartDate).toLocaleDateString();
-        const checkOut = new Date(userData.EndDate).toLocaleDateString();
+      if (reservationData && mailTransporter) {
+        const userEmail = reservationData.users?.email || reservationData.guest_email;
+        const userName = reservationData.users 
+          ? `${reservationData.users.first_name || ''} ${reservationData.users.last_name || ''}`.trim()
+          : `${reservationData.guest_first_name || ''} ${reservationData.guest_last_name || ''}`.trim() || 'Guest';
+        const roomName = reservationData.rooms?.name || 'Room';
+        const checkIn = new Date(reservationData.start_date).toLocaleDateString();
+        const checkOut = new Date(reservationData.end_date).toLocaleDateString();
 
         if (userEmail && ['Approved', 'Rejected', 'Cancelled'].includes(status)) {
           try {
@@ -814,7 +855,26 @@ app.post(
         reservation: updatedReservation
       });
 
-      res.json(updatedReservation);
+      // Transform to match expected format
+      const transformed = {
+        Id: updatedReservation.id,
+        UserId: updatedReservation.user_id,
+        RoomId: updatedReservation.room_id,
+        StartDate: updatedReservation.start_date,
+        EndDate: updatedReservation.end_date,
+        Status: updatedReservation.status,
+        TotalPrice: updatedReservation.total_price,
+        GuestFirstName: updatedReservation.guest_first_name,
+        GuestLastName: updatedReservation.guest_last_name,
+        GuestEmail: updatedReservation.guest_email,
+        GuestPhone: updatedReservation.guest_phone,
+        Notes: updatedReservation.notes,
+        CreatedAt: updatedReservation.created_at,
+        CanceledAt: updatedReservation.canceled_at,
+        CanceledBy: updatedReservation.canceled_by
+      };
+
+      res.json(transformed);
     } catch (error: any) {
       console.error('Update reservation status error:', error);
       res
@@ -842,17 +902,20 @@ app.post(
     }
 
     try {
-      const pool = await getDbConnection();
-      const result = await pool
-        .request()
-        .input('reservationId', sql.Int, reservationId)
-        .input('note', sql.NVarChar, note)
-        .input('createdByUserId', sql.Int, req.user.userId)
-        .query(
-          `INSERT INTO [dbo].[ReservationNotes] (ReservationId, Note, CreatedByUserId)
-           OUTPUT INSERTED.*
-           VALUES (@reservationId, @note, @createdByUserId)`
-        );
+      const supabase = await getDbConnection();
+      const { data: noteRecord, error: insertError } = await supabase
+        .from('reservation_notes')
+        .insert({
+          reservation_id: reservationId,
+          note: note,
+          created_by_user_id: req.user.userId
+        })
+        .select()
+        .single();
+
+      if (insertError || !noteRecord) {
+        throw insertError || new Error('Failed to add note');
+      }
 
       await logAudit(
         req.user.userId,
@@ -862,7 +925,16 @@ app.post(
         note
       );
 
-      res.status(201).json(result.recordset[0]);
+      // Transform to match expected format
+      const transformed = {
+        Id: noteRecord.id,
+        ReservationId: noteRecord.reservation_id,
+        Note: noteRecord.note,
+        CreatedByUserId: noteRecord.created_by_user_id,
+        CreatedAt: noteRecord.created_at
+      };
+
+      res.status(201).json(transformed);
     } catch (error: any) {
       console.error('Add reservation note error:', error);
       res
@@ -892,32 +964,29 @@ app.put(
     }
 
     try {
-      const pool = await getDbConnection();
-      const fields: string[] = [];
-      const request = pool.request().input('id', sql.Int, reservationId);
+      const supabase = await getDbConnection();
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
 
       if (startDate) {
-        fields.push('StartDate = @startDate');
-        request.input('startDate', sql.Date, startDate);
+        updateData.start_date = startDate;
       }
       if (endDate) {
-        fields.push('EndDate = @endDate');
-        request.input('endDate', sql.Date, endDate);
+        updateData.end_date = endDate;
       }
       if (roomId) {
-        fields.push('RoomId = @roomId');
-        request.input('roomId', sql.Int, roomId);
+        updateData.room_id = roomId;
       }
 
-      const query = `
-        UPDATE [dbo].[Reservations]
-        SET ${fields.join(', ')}, UpdatedAt = GETDATE()
-        WHERE Id = @id;
-        SELECT * FROM [dbo].[Reservations] WHERE Id = @id;
-      `;
+      const { data: reservation, error: updateError } = await supabase
+        .from('reservations')
+        .update(updateData)
+        .eq('id', reservationId)
+        .select()
+        .single();
 
-      const result = await request.query(query);
-      if (result.recordset.length === 0) {
+      if (updateError || !reservation) {
         return res.status(404).json({ error: 'Reservation not found' });
       }
 
@@ -931,7 +1000,26 @@ app.put(
         );
       }
 
-      res.json(result.recordset[0]);
+      // Transform to match expected format
+      const transformed = {
+        Id: reservation.id,
+        UserId: reservation.user_id,
+        RoomId: reservation.room_id,
+        StartDate: reservation.start_date,
+        EndDate: reservation.end_date,
+        Status: reservation.status,
+        TotalPrice: reservation.total_price,
+        GuestFirstName: reservation.guest_first_name,
+        GuestLastName: reservation.guest_last_name,
+        GuestEmail: reservation.guest_email,
+        GuestPhone: reservation.guest_phone,
+        Notes: reservation.notes,
+        CreatedAt: reservation.created_at,
+        CanceledAt: reservation.canceled_at,
+        CanceledBy: reservation.canceled_by
+      };
+
+      res.json(transformed);
     } catch (error: any) {
       console.error('Modify reservation error:', error);
       res
@@ -948,19 +1036,45 @@ app.get(
   requireRole(['Support', 'Manager', 'SuperAdmin']),
   async (req: AuthRequest, res) => {
     try {
-      const pool = await getDbConnection();
-      const result = await pool.request().query(`
-        SELECT r.*, 
-               CASE 
-                 WHEN EXISTS (
-                   SELECT 1 FROM [dbo].[RoomBlocks] b
-                   WHERE b.RoomId = r.Id
-                     AND (b.IsPermanent = 1 OR (b.StartDate <= CAST(GETDATE() AS DATE) AND b.EndDate >= CAST(GETDATE() AS DATE)))
-               ) THEN 1 ELSE 0 END AS IsCurrentlyBlocked
-        FROM [dbo].[Rooms] r
-        ORDER BY r.Name
-      `);
-      res.json(result.recordset);
+      const supabase = await getDbConnection();
+      const today = new Date().toISOString().split('T')[0];
+
+      const { data: rooms, error: roomsError } = await supabase
+        .from('rooms')
+        .select('*')
+        .order('name');
+
+      const { data: blocks, error: blocksError } = await supabase
+        .from('room_blocks')
+        .select('room_id, is_permanent, start_date, end_date');
+
+      if (roomsError || blocksError) {
+        throw roomsError || blocksError;
+      }
+
+      // Check which rooms are currently blocked
+      const blockedRoomIds = new Set(
+        blocks?.filter(b => 
+          b.is_permanent || (b.start_date <= today && b.end_date >= today)
+        ).map(b => b.room_id) || []
+      );
+
+      // Transform to match expected format
+      const transformed = rooms?.map((r: any) => ({
+        Id: r.id,
+        Name: r.name,
+        Type: r.type,
+        BasePrice: r.base_price,
+        Status: r.status,
+        VisibleToUsers: r.visible_to_users,
+        VisibilityRole: r.visibility_role,
+        HasUnresolvedMaintenance: r.has_unresolved_maintenance,
+        CreatedAt: r.created_at,
+        UpdatedAt: r.updated_at,
+        IsCurrentlyBlocked: blockedRoomIds.has(r.id) ? 1 : 0
+      })) || [];
+
+      res.json(transformed);
     } catch (error: any) {
       console.error('List rooms error:', error);
       res.status(500).json({ error: 'Failed to load rooms', details: error.message });
@@ -981,19 +1095,18 @@ app.post(
     }
 
     try {
-      const pool = await getDbConnection();
-      const result = await pool
-        .request()
-        .input('id', sql.Int, roomId)
-        .input('status', sql.NVarChar, status)
-        .query(
-          `UPDATE [dbo].[Rooms]
-           SET Status = @status, UpdatedAt = GETDATE()
-           WHERE Id = @id;
-           SELECT * FROM [dbo].[Rooms] WHERE Id = @id;`
-        );
+      const supabase = await getDbConnection();
+      const { data: updatedRoom, error: updateError } = await supabase
+        .from('rooms')
+        .update({
+          status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', roomId)
+        .select()
+        .single();
 
-      if (result.recordset.length === 0) {
+      if (updateError || !updatedRoom) {
         return res.status(404).json({ error: 'Room not found' });
       }
 
@@ -1001,16 +1114,28 @@ app.post(
         await logAudit(req.user.userId, `Changed room status to ${status}`, 'Room', roomId);
       }
 
-      const updatedRoom = result.recordset[0];
+      // Transform to match expected format
+      const transformed = {
+        Id: updatedRoom.id,
+        Name: updatedRoom.name,
+        Type: updatedRoom.type,
+        BasePrice: updatedRoom.base_price,
+        Status: updatedRoom.status,
+        VisibleToUsers: updatedRoom.visible_to_users,
+        VisibilityRole: updatedRoom.visibility_role,
+        HasUnresolvedMaintenance: updatedRoom.has_unresolved_maintenance,
+        CreatedAt: updatedRoom.created_at,
+        UpdatedAt: updatedRoom.updated_at
+      };
       
       // Emit real-time update to all connected clients
       io.emit('room-status-updated', {
         roomId,
         status,
-        room: updatedRoom
+        room: transformed
       });
 
-      res.json(updatedRoom);
+      res.json(transformed);
     } catch (error: any) {
       console.error('Update room status error:', error);
       res
@@ -1045,28 +1170,33 @@ app.post(
     }
 
     try {
-      const pool = await getDbConnection();
-      const request = pool
-        .request()
-        .input('roomId', sql.Int, roomId)
-        .input('isPermanent', sql.Bit, isPermanent ? 1 : 0)
-        .input('reason', sql.NVarChar, reason || null)
-        .input('createdByUserId', sql.Int, req.user.userId);
+      const supabase = await getDbConnection();
+      
+      const blockData: any = {
+        room_id: roomId,
+        is_permanent: isPermanent || false,
+        reason: reason || null,
+        created_by_user_id: req.user.userId
+      };
 
       if (isPermanent) {
         // For permanent blocks we can set a very wide date range to keep constraints simple
-        request.input('startDate', sql.Date, new Date(2000, 0, 1));
-        request.input('endDate', sql.Date, new Date(2100, 0, 1));
+        blockData.start_date = '2000-01-01';
+        blockData.end_date = '2100-01-01';
       } else {
-        request.input('startDate', sql.Date, startDate as string);
-        request.input('endDate', sql.Date, endDate as string);
+        blockData.start_date = startDate;
+        blockData.end_date = endDate;
       }
 
-      const result = await request.query(
-        `INSERT INTO [dbo].[RoomBlocks] (RoomId, StartDate, EndDate, IsPermanent, Reason, CreatedByUserId)
-         OUTPUT INSERTED.*
-         VALUES (@roomId, @startDate, @endDate, @isPermanent, @reason, @createdByUserId);`
-      );
+      const { data: blockRecord, error: insertError } = await supabase
+        .from('room_blocks')
+        .insert(blockData)
+        .select()
+        .single();
+
+      if (insertError || !blockRecord) {
+        throw insertError || new Error('Failed to block room');
+      }
 
       await logAudit(
         req.user.userId,
@@ -1076,7 +1206,19 @@ app.post(
         JSON.stringify({ startDate, endDate, reason })
       );
 
-      res.status(201).json(result.recordset[0]);
+      // Transform to match expected format
+      const transformed = {
+        Id: blockRecord.id,
+        RoomId: blockRecord.room_id,
+        StartDate: blockRecord.start_date,
+        EndDate: blockRecord.end_date,
+        IsPermanent: blockRecord.is_permanent,
+        Reason: blockRecord.reason,
+        CreatedByUserId: blockRecord.created_by_user_id,
+        CreatedAt: blockRecord.created_at
+      };
+
+      res.status(201).json(transformed);
     } catch (error: any) {
       console.error('Block room error:', error);
       res.status(500).json({ error: 'Failed to block room', details: error.message });
@@ -1091,21 +1233,41 @@ app.get(
   requireRole(['Support', 'Manager', 'SuperAdmin']),
   async (req: AuthRequest, res) => {
     try {
-      const pool = await getDbConnection();
+      const supabase = await getDbConnection();
 
-      const reservations = await pool.request().query(`
-        SELECT Id, RoomId, StartDate, EndDate, Status
-        FROM [dbo].[Reservations]
-      `);
+      const { data: reservations, error: resError } = await supabase
+        .from('reservations')
+        .select('id, room_id, start_date, end_date, status');
 
-      const blocks = await pool.request().query(`
-        SELECT Id, RoomId, StartDate, EndDate, IsPermanent, Reason
-        FROM [dbo].[RoomBlocks]
-      `);
+      const { data: blocks, error: blocksError } = await supabase
+        .from('room_blocks')
+        .select('id, room_id, start_date, end_date, is_permanent, reason');
+
+      if (resError || blocksError) {
+        throw resError || blocksError;
+      }
+
+      // Transform to match expected format
+      const transformedReservations = reservations?.map((r: any) => ({
+        Id: r.id,
+        RoomId: r.room_id,
+        StartDate: r.start_date,
+        EndDate: r.end_date,
+        Status: r.status
+      })) || [];
+
+      const transformedBlocks = blocks?.map((b: any) => ({
+        Id: b.id,
+        RoomId: b.room_id,
+        StartDate: b.start_date,
+        EndDate: b.end_date,
+        IsPermanent: b.is_permanent,
+        Reason: b.reason
+      })) || [];
 
       res.json({
-        reservations: reservations.recordset,
-        blocks: blocks.recordset
+        reservations: transformedReservations,
+        blocks: transformedBlocks
       });
     } catch (error: any) {
       console.error('Calendar data error:', error);
@@ -1165,53 +1327,28 @@ app.post('/api/public/reservations', async (req, res) => {
     const totalPrice =
       pricePerNight && nights > 0 ? pricePerNight * nights : null;
 
-    const pool = await getDbConnection();
-    const request = pool
-      .request()
-      .input('userId', sql.Int, userId ?? null)
-      .input('roomId', sql.Int, roomId ?? null)
-      .input('startDate', sql.Date, startDate)
-      .input('endDate', sql.Date, endDate)
-      .input('status', sql.NVarChar, 'Pending')
-      .input('totalPrice', sql.Decimal(18, 2), totalPrice)
-      .input('guestFirstName', sql.NVarChar, firstName)
-      .input('guestLastName', sql.NVarChar, lastName)
-      .input('guestEmail', sql.NVarChar, email)
-      .input('guestPhone', sql.NVarChar, phone || null)
-      .input('notes', sql.NVarChar, notes || null);
+    const supabase = await getDbConnection();
+    const { data: reservation, error: insertError } = await supabase
+      .from('reservations')
+      .insert({
+        user_id: userId ?? null,
+        room_id: roomId ?? null,
+        start_date: startDate,
+        end_date: endDate,
+        status: 'Pending',
+        total_price: totalPrice,
+        guest_first_name: firstName,
+        guest_last_name: lastName,
+        guest_email: email,
+        guest_phone: phone || null,
+        notes: notes || null
+      })
+      .select()
+      .single();
 
-    const insertQuery = `
-      INSERT INTO [dbo].[Reservations] (
-        UserId,
-        RoomId,
-        StartDate,
-        EndDate,
-        Status,
-        TotalPrice,
-        GuestFirstName,
-        GuestLastName,
-        GuestEmail,
-        GuestPhone,
-        Notes
-      )
-      OUTPUT INSERTED.*
-      VALUES (
-        @userId,
-        @roomId,
-        @startDate,
-        @endDate,
-        @status,
-        @totalPrice,
-        @guestFirstName,
-        @guestLastName,
-        @guestEmail,
-        @guestPhone,
-        @notes
-      );
-    `;
-
-    const result = await request.query(insertQuery);
-    const reservation = result.recordset[0];
+    if (insertError || !reservation) {
+      throw insertError || new Error('Failed to create reservation');
+    }
 
     // Try to send emails, but do not fail the reservation if email sending fails
     try {
@@ -1249,35 +1386,60 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res) 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const pool = await getDbConnection();
-    const result = await pool
-      .request()
-      .input('userId', sql.Int, req.user.userId)
-      .query(`
-        SELECT r.Id,
-               r.RoomId,
-               r.StartDate,
-               r.EndDate,
-               r.Status,
-               r.TotalPrice,
-               r.GuestFirstName,
-               r.GuestLastName,
-               r.GuestEmail,
-               r.GuestPhone,
-               r.Notes,
-               r.CreatedAt,
-               r.CanceledAt,
-               r.CanceledBy,
-               rm.Name AS RoomName,
-               rm.Type AS RoomType,
-               rm.BasePrice
-        FROM [dbo].[Reservations] r
-        LEFT JOIN [dbo].[Rooms] rm ON rm.Id = r.RoomId
-        WHERE r.UserId = @userId
-        ORDER BY r.StartDate DESC, r.CreatedAt DESC
-      `);
+    const supabase = await getDbConnection();
+    const { data: reservations, error } = await supabase
+      .from('reservations')
+      .select(`
+        id,
+        room_id,
+        start_date,
+        end_date,
+        status,
+        total_price,
+        guest_first_name,
+        guest_last_name,
+        guest_email,
+        guest_phone,
+        notes,
+        created_at,
+        canceled_at,
+        canceled_by,
+        rooms:room_id (
+          name,
+          type,
+          base_price
+        )
+      `)
+      .eq('user_id', req.user.userId)
+      .order('start_date', { ascending: false })
+      .order('created_at', { ascending: false });
 
-    res.json(result.recordset);
+    if (error) {
+      throw error;
+    }
+
+    // Transform the data to match expected format
+    const transformed = reservations?.map((r: any) => ({
+      Id: r.id,
+      RoomId: r.room_id,
+      StartDate: r.start_date,
+      EndDate: r.end_date,
+      Status: r.status,
+      TotalPrice: r.total_price,
+      GuestFirstName: r.guest_first_name,
+      GuestLastName: r.guest_last_name,
+      GuestEmail: r.guest_email,
+      GuestPhone: r.guest_phone,
+      Notes: r.notes,
+      CreatedAt: r.created_at,
+      CanceledAt: r.canceled_at,
+      CanceledBy: r.canceled_by,
+      RoomName: r.rooms?.name,
+      RoomType: r.rooms?.type,
+      BasePrice: r.rooms?.base_price
+    })) || [];
+
+    res.json(transformed);
   } catch (error: any) {
     console.error('User reservations error:', error);
     res.status(500).json({ error: 'Failed to load reservations', details: error.message });
@@ -1294,49 +1456,46 @@ app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthReq
     }
 
     const reservationId = Number(req.params['id']);
-    const pool = await getDbConnection();
+    const supabase = await getDbConnection();
     
     // First verify the reservation belongs to this user
-    const checkResult = await pool
-      .request()
-      .input('id', sql.Int, reservationId)
-      .input('userId', sql.Int, req.user.userId)
-      .query(`
-        SELECT Id, Status FROM [dbo].[Reservations]
-        WHERE Id = @id AND UserId = @userId
-      `);
+    const { data: reservation, error: checkError } = await supabase
+      .from('reservations')
+      .select('id, status')
+      .eq('id', reservationId)
+      .eq('user_id', req.user.userId)
+      .single();
 
-    if (checkResult.recordset.length === 0) {
+    if (checkError || !reservation) {
       return res.status(404).json({ error: 'Reservation not found or you do not have permission to cancel it' });
     }
-
-    const reservation = checkResult.recordset[0];
     
     // Don't allow canceling already canceled or completed reservations
-    if (reservation.Status === 'Cancelled' || reservation.Status === 'Completed') {
-      return res.status(400).json({ error: `Cannot cancel a reservation with status: ${reservation.Status}` });
+    if (reservation.status === 'Cancelled' || reservation.status === 'Completed') {
+      return res.status(400).json({ error: `Cannot cancel a reservation with status: ${reservation.status}` });
     }
 
     // Don't allow users to cancel approved reservations
-    if (reservation.Status === 'Approved') {
+    if (reservation.status === 'Approved') {
       return res.status(400).json({ error: 'Cannot cancel an approved reservation. Please contact support.' });
     }
 
     // Update status to Cancelled and set CanceledAt timestamp and CanceledBy
-    const updateResult = await pool
-      .request()
-      .input('id', sql.Int, reservationId)
-      .query(`
-        UPDATE [dbo].[Reservations]
-        SET Status = 'Cancelled',
-            CanceledAt = GETDATE(),
-            CanceledBy = 'User',
-            UpdatedAt = GETDATE()
-        WHERE Id = @id;
-        SELECT * FROM [dbo].[Reservations] WHERE Id = @id;
-      `);
+    const { data: cancelledReservation, error: updateError } = await supabase
+      .from('reservations')
+      .update({
+        status: 'Cancelled',
+        canceled_at: new Date().toISOString(),
+        canceled_by: 'User',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', reservationId)
+      .select()
+      .single();
 
-    const cancelledReservation = updateResult.recordset[0];
+    if (updateError || !cancelledReservation) {
+      throw updateError || new Error('Failed to cancel reservation');
+    }
     
     // Emit real-time update to all connected clients
     io.emit('reservation-status-updated', {
@@ -1372,38 +1531,70 @@ app.get('/api/public/available-rooms', async (req, res) => {
         .json({ error: 'Invalid dates. End date must be after start date.' });
     }
 
-    const pool = await getDbConnection();
-    const result = await pool
-      .request()
-      .input('startDate', sql.Date, startDate)
-      .input('endDate', sql.Date, endDate)
-      .query(`
-        SELECT r.*
-        FROM [dbo].[Rooms] r
-        WHERE r.VisibleToUsers = 1
-          AND r.Status = 'Available'
-          AND NOT EXISTS (
-            SELECT 1
-            FROM [dbo].[Reservations] res
-            WHERE res.RoomId = r.Id
-              AND res.Status IN ('Approved','Completed')
-              AND res.Status != 'Cancelled'
-              AND res.StartDate < @endDate
-              AND res.EndDate > @startDate
-          )
-          AND NOT EXISTS (
-            SELECT 1
-            FROM [dbo].[RoomBlocks] b
-            WHERE b.RoomId = r.Id
-              AND (
-                b.IsPermanent = 1
-                OR (b.StartDate < @endDate AND b.EndDate > @startDate)
-              )
-          )
-        ORDER BY r.Name;
-      `);
+    const supabase = await getDbConnection();
+    
+    // Get all available rooms
+    const { data: allRooms, error: roomsError } = await supabase
+      .from('rooms')
+      .select('*')
+      .eq('visible_to_users', true)
+      .eq('status', 'Available')
+      .order('name');
 
-    res.json(result.recordset);
+    if (roomsError) {
+      throw roomsError;
+    }
+
+    // Get conflicting reservations
+    const { data: conflictingReservations, error: resError } = await supabase
+      .from('reservations')
+      .select('room_id')
+      .in('status', ['Approved', 'Completed'])
+      .neq('status', 'Cancelled')
+      .lt('start_date', endDate)
+      .gt('end_date', startDate);
+
+    if (resError) {
+      throw resError;
+    }
+
+    // Get conflicting blocks
+    const { data: allBlocks, error: blocksError } = await supabase
+      .from('room_blocks')
+      .select('room_id, is_permanent, start_date, end_date');
+
+    if (blocksError) {
+      throw blocksError;
+    }
+
+    // Filter blocks that conflict with the date range
+    const conflictingBlocks = allBlocks?.filter(b => 
+      b.is_permanent || (b.start_date < endDate && b.end_date > startDate)
+    ) || [];
+
+    // Filter out rooms with conflicts
+    const conflictingRoomIds = new Set([
+      ...(conflictingReservations?.map(r => r.room_id) || []),
+      ...(conflictingBlocks?.map(b => b.room_id) || [])
+    ]);
+
+    const availableRooms = allRooms?.filter(room => !conflictingRoomIds.has(room.id)) || [];
+
+    // Transform to match expected format
+    const transformed = availableRooms.map((r: any) => ({
+      Id: r.id,
+      Name: r.name,
+      Type: r.type,
+      BasePrice: r.base_price,
+      Status: r.status,
+      VisibleToUsers: r.visible_to_users,
+      VisibilityRole: r.visibility_role,
+      HasUnresolvedMaintenance: r.has_unresolved_maintenance,
+      CreatedAt: r.created_at,
+      UpdatedAt: r.updated_at
+    }));
+
+    res.json(transformed);
   } catch (error: any) {
     console.error('Available rooms error:', error);
     res.status(500).json({ error: 'Failed to load available rooms', details: error.message });
