@@ -40,7 +40,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Debug middleware for API routes (can be removed in production)
 app.use('/api/*', (req, res, next) => {
-  console.log(`[API] ${req.method} ${req.path}`);
+  console.log(`[API Middleware] ${req.method} ${req.path} ${req.url} ${req.originalUrl}`);
   next();
 });
 
@@ -160,7 +160,7 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
 
 // Login endpoint - must be defined before catch-all routes
 app.post('/api/auth/login', async (req, res): Promise<void> => {
-  console.log('[LOGIN] POST /api/auth/login received', { 
+  console.log('[LOGIN HANDLER] POST /api/auth/login received', { 
     method: req.method, 
     path: req.path,
     url: req.url,
@@ -235,6 +235,11 @@ app.get('/api/health', (req, res): void => {
 // Test endpoint to verify API routing works
 app.get('/api/test', (req, res): void => {
   res.json({ message: 'API routes are working', method: req.method, path: req.path });
+});
+
+// Test POST endpoint to verify POST routing works
+app.post('/api/test', (req, res): void => {
+  res.json({ message: 'POST API routes are working', method: req.method, path: req.path, body: req.body });
 });
 
 /**
@@ -511,7 +516,7 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
  */
 app.all('/api/*', (req, res) => {
   // If we reach here, the API route wasn't matched by any handler above
-  console.log('[API 404] Unmatched API route:', req.method, req.path);
+  console.log('[API 404] Unmatched API route:', req.method, req.path, req.url);
   res.status(404).json({ 
     error: 'API endpoint not found', 
     path: req.path, 
@@ -542,9 +547,16 @@ app.use((req, res, next) => {
  * All /api routes should have been handled by the API route handlers above.
  */
 app.use((req, res, next) => {
-  // Skip Angular handler for API routes
-  if (req.path.startsWith('/api/')) {
-    return next();
+  // Skip Angular handler for API routes - if we reach here with an API route, something is wrong
+  if (req.path.startsWith('/api/') || req.url.startsWith('/api/')) {
+    console.log('[API ERROR] API route reached Angular handler - route not matched!', req.method, req.path, req.url);
+    res.status(405).json({ 
+      error: 'Method not allowed',
+      path: req.path,
+      method: req.method,
+      message: 'API route not properly handled - this indicates a routing issue'
+    });
+    return;
   }
   angularApp
     .handle(req)
@@ -565,7 +577,22 @@ if (isMainModule(import.meta.url)) {
   });
 }
 
+// Log all registered routes for debugging
+console.log('[SERVER INIT] Express app initialized with routes');
+console.log('[SERVER INIT] Registered API routes:', [
+  'POST /api/auth/register',
+  'POST /api/auth/login',
+  'GET /api/health',
+  'GET /api/test',
+  'POST /api/test',
+  'GET /api/user/profile',
+  'PUT /api/user/profile',
+  'PUT /api/user/email',
+  'PUT /api/user/password',
+  'GET /api/user/reservations'
+]);
+
 /**
- * Request handler used by the Angular CLI (for dev-server and during build) or Firebase Cloud Functions.
+ * Request handler used by the Angular CLI (for dev-server and during build) or Vercel.
  */
 export const reqHandler = createNodeRequestHandler(app);
