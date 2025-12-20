@@ -637,11 +637,25 @@ console.log('[SERVER INIT] Registered API routes:', [
 ]);
 
 /**
- * Request handler used by the Angular CLI (for dev-server and during build) or Vercel.
- * 
- * IMPORTANT: On Vercel, this handler wraps the Express app. The Express app above
- * has API routes registered BEFORE the Angular SSR handler, so API routes should
- * be matched first. However, if POST requests still fail, it may be a Vercel
- * serverless function configuration issue.
+ * Custom request handler for Vercel that ensures API routes are handled BEFORE Angular SSR.
+ * This is critical because on Vercel, Angular SSR's createNodeRequestHandler may intercept
+ * POST requests before they reach Express routes.
  */
-export const reqHandler = createNodeRequestHandler(app);
+export const reqHandler = async (req: any, res: any) => {
+  // CRITICAL: Check if this is an API route BEFORE Angular SSR processes it
+  // This ensures POST requests to /api/* are handled by Express, not Angular
+  const isApiRoute = req.url?.startsWith('/api/') || 
+                     req.path?.startsWith('/api/') || 
+                     req.originalUrl?.startsWith('/api/');
+  
+  if (isApiRoute) {
+    // Handle API routes directly with Express - bypass Angular SSR completely
+    // This is necessary because Angular SSR may not properly handle POST requests
+    console.log('[Vercel Handler] API route detected, routing to Express:', req.method, req.url);
+    return app(req, res);
+  }
+  
+  // For non-API routes, use Angular SSR handler
+  const angularHandler = createNodeRequestHandler(app);
+  return angularHandler(req, res);
+};
