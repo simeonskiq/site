@@ -1,4 +1,5 @@
 export const environment = {
   production: false,
-  apiUrl: 'https://site-lake-alpha.vercel.app/'
+  // For development, use the full URL (no trailing slash needed)
+  apiUrl: 'https://site-lake-alpha.vercel.app'
 }; 

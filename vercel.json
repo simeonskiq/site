@@ -7,5 +7,10 @@
       "source": "/(.*)",
       "destination": "/"
     }
-  ]
+  ],
+  "functions": {
+    "dist/site/server/server.mjs": {
+      "includeFiles": "dist/site/server/**"
+    }
+  }
 }
