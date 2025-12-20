@@ -160,6 +160,13 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
 
 // Login endpoint - must be defined before catch-all routes
 app.post('/api/auth/login', async (req, res): Promise<void> => {
+  console.log('[LOGIN] POST /api/auth/login received', { 
+    method: req.method, 
+    path: req.path, 
+    hasBody: !!req.body,
+    bodyKeys: req.body ? Object.keys(req.body) : []
+  });
+  
   try {
     const { email, password } = req.body;
 
@@ -497,16 +504,25 @@ app.use((req, res, next) => {
 });
 
 /**
+ * Catch-all for unmatched API routes - must come after all API route definitions
+ * This ensures API routes that don't match return 404, not Angular router errors
+ */
+app.all('/api/*', (req, res) => {
+  console.log('[API 404] Unmatched API route:', req.method, req.path);
+  res.status(404).json({ 
+    error: 'API endpoint not found', 
+    path: req.path, 
+    method: req.method,
+    message: `No ${req.method} handler found for ${req.path}`
+  });
+});
+
+/**
  * Handle all other requests by rendering the Angular application.
  * This should be last to catch all non-API routes.
- * Explicitly exclude /api routes to ensure API handlers are matched first.
+ * All /api routes should have been handled by the API route handlers above.
  */
 app.use((req, res, next) => {
-  // Skip Angular rendering for API routes
-  if (req.path.startsWith('/api/')) {
-    return next();
-  }
-  
   angularApp
     .handle(req)
     .then((response) =>
