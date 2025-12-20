@@ -29,6 +29,8 @@ export const appConfig: ApplicationConfig = {
             }
           });
 
+          console.log('Interceptor token:', token);
+
           return next(authReq);
         }
       ])
