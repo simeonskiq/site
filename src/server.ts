@@ -7,7 +7,6 @@ import {
 import express from 'express';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import sql from 'mssql';
 import { getDbConnection } from './server/db.config.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -101,15 +100,16 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
       return;
     }
 
-    const pool = await getDbConnection();
+    const supabase = await getDbConnection();
 
     // Check if user already exists
-    const checkUserQuery = `SELECT Id FROM [dbo].[Users] WHERE Email = @email`;
-    const checkResult = await pool.request()
-      .input('email', sql.NVarChar, email)
-      .query(checkUserQuery);
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
 
-    if (checkResult.recordset.length > 0) {
+    if (existingUser) {
       res.status(409).json({ error: 'User with this email already exists' });
       return;
     }
@@ -118,25 +118,25 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Insert new user
-    const insertQuery = `
-      INSERT INTO [dbo].[Users] (Email, PasswordHash, FirstName, LastName, Phone)
-      OUTPUT INSERTED.Id, INSERTED.Email, INSERTED.FirstName, INSERTED.LastName, INSERTED.Phone, INSERTED.CreatedAt
-      VALUES (@email, @passwordHash, @firstName, @lastName, @phone)
-    `;
+    const { data: user, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        email: email,
+        password_hash: passwordHash,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone: phone || null
+      })
+      .select('id, email, first_name, last_name, phone, created_at')
+      .single();
 
-    const result = await pool.request()
-      .input('email', sql.NVarChar, email)
-      .input('passwordHash', sql.NVarChar, passwordHash)
-      .input('firstName', sql.NVarChar, firstName || null)
-      .input('lastName', sql.NVarChar, lastName || null)
-      .input('phone', sql.NVarChar, phone || null)
-      .query(insertQuery);
-
-    const user = result.recordset[0];
+    if (insertError || !user) {
+      throw insertError || new Error('Failed to create user');
+    }
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.Id, email: user.Email },
+      { userId: user.id, email: user.email },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -144,11 +144,11 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
     res.status(201).json({
       message: 'User registered successfully',
       user: {
-        id: user.Id,
-        email: user.Email,
-        firstName: user.FirstName,
-        lastName: user.LastName,
-        phone: user.Phone
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone: user.phone
       },
       token
     });
@@ -176,28 +176,22 @@ app.post('/api/auth/login', async (req, res): Promise<void> => {
       return;
     }
 
-    const pool = await getDbConnection();
+    const supabase = await getDbConnection();
 
     // Find user by email
-    const findUserQuery = `
-      SELECT Id, Email, PasswordHash, FirstName, LastName, Phone, Role, CreatedAt
-      FROM [dbo].[Users]
-      WHERE Email = @email
-    `;
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, password_hash, first_name, last_name, phone, role, created_at')
+      .eq('email', email)
+      .single();
 
-    const result = await pool.request()
-      .input('email', sql.NVarChar, email)
-      .query(findUserQuery);
-
-    if (result.recordset.length === 0) {
+    if (userError || !user) {
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
 
-    const user = result.recordset[0];
-
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.PasswordHash);
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
       res.status(401).json({ error: 'Invalid email or password' });
@@ -206,9 +200,9 @@ app.post('/api/auth/login', async (req, res): Promise<void> => {
 
     // Generate JWT token
     const tokenPayload = {
-      userId: user.Id,
-      email: user.Email,
-      role: user.Role || 'User'
+      userId: user.id,
+      email: user.email,
+      role: user.role || 'User'
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
@@ -216,12 +210,12 @@ app.post('/api/auth/login', async (req, res): Promise<void> => {
     res.json({
       message: 'Login successful',
       user: {
-        id: user.Id,
-        email: user.Email,
-        firstName: user.FirstName,
-        lastName: user.LastName,
-        phone: user.Phone,
-        role: user.Role
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone: user.phone,
+        role: user.role
       },
       token
     });
@@ -251,29 +245,25 @@ app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res): Prom
       return;
     }
 
-    const pool = await getDbConnection();
-    const result = await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .query(`
-        SELECT Id, Email, FirstName, LastName, Phone, Role
-        FROM [dbo].[Users]
-        WHERE Id = @id
-      `);
+    const supabase = await getDbConnection();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name, phone, role')
+      .eq('id', req.user.userId)
+      .single();
 
-    if (!result.recordset.length) {
+    if (error || !user) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
-    const user = result.recordset[0];
     res.json({
-      id: user.Id,
-      email: user.Email,
-      firstName: user.FirstName,
-      lastName: user.LastName,
-      phone: user.Phone,
-      role: user.Role
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone,
+      role: user.role
     });
   } catch (error: any) {
     console.error('Get profile error:', error);
@@ -294,31 +284,30 @@ app.put('/api/user/profile', authMiddleware, async (req: AuthRequest, res): Prom
       phone?: string;
     };
 
-    const pool = await getDbConnection();
-    const result = await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .input('firstName', sql.NVarChar, firstName || null)
-      .input('lastName', sql.NVarChar, lastName || null)
-      .input('phone', sql.NVarChar, phone || null)
-      .query(`
-        UPDATE [dbo].[Users]
-        SET FirstName = @firstName,
-            LastName = @lastName,
-            Phone = @phone,
-            UpdatedAt = GETDATE()
-        WHERE Id = @id;
-        SELECT Id, Email, FirstName, LastName, Phone, Role FROM [dbo].[Users] WHERE Id = @id;
-      `);
+    const supabase = await getDbConnection();
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone: phone || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.user.userId)
+      .select('id, email, first_name, last_name, phone, role')
+      .single();
 
-    const user = result.recordset[0];
+    if (error || !user) {
+      throw error || new Error('Failed to update user');
+    }
+
     res.json({
-      id: user.Id,
-      email: user.Email,
-      firstName: user.FirstName,
-      lastName: user.LastName,
-      phone: user.Phone,
-      role: user.Role
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone,
+      role: user.role
     });
   } catch (error: any) {
     console.error('Update profile error:', error);
@@ -339,39 +328,42 @@ app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res): Promis
       return;
     }
 
-    const pool = await getDbConnection();
+    const supabase = await getDbConnection();
 
     // Ensure email is not already taken
-    const exists = await pool
-      .request()
-      .input('email', sql.NVarChar, email)
-      .query(
-        `SELECT Id FROM [dbo].[Users] WHERE Email = @email AND Id <> ${req.user.userId}`
-      );
-    if (exists.recordset.length) {
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .neq('id', req.user.userId)
+      .single();
+
+    if (existingUser) {
       res.status(409).json({ error: 'Email already in use' });
       return;
     }
 
-    const result = await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .input('email', sql.NVarChar, email)
-      .query(`
-        UPDATE [dbo].[Users]
-        SET Email = @email, UpdatedAt = GETDATE()
-        WHERE Id = @id;
-        SELECT Id, Email, FirstName, LastName, Phone, Role FROM [dbo].[Users] WHERE Id = @id;
-      `);
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({
+        email: email,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.user.userId)
+      .select('id, email, first_name, last_name, phone, role')
+      .single();
 
-    const user = result.recordset[0];
+    if (error || !user) {
+      throw error || new Error('Failed to update email');
+    }
+
     res.json({
-      id: user.Id,
-      email: user.Email,
-      firstName: user.FirstName,
-      lastName: user.LastName,
-      phone: user.Phone,
-      role: user.Role
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone,
+      role: user.role
     });
   } catch (error: any) {
     console.error('Update email error:', error);
@@ -402,38 +394,36 @@ app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res): Pro
       return;
     }
 
-    const pool = await getDbConnection();
-    const userResult = await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .query(`
-        SELECT Id, PasswordHash
-        FROM [dbo].[Users]
-        WHERE Id = @id
-      `);
+    const supabase = await getDbConnection();
+    const { data: dbUser, error: userError } = await supabase
+      .from('users')
+      .select('id, password_hash')
+      .eq('id', req.user.userId)
+      .single();
 
-    if (!userResult.recordset.length) {
+    if (userError || !dbUser) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
-    const dbUser = userResult.recordset[0];
-    const isValid = await bcrypt.compare(currentPassword, dbUser.PasswordHash);
+    const isValid = await bcrypt.compare(currentPassword, dbUser.password_hash);
     if (!isValid) {
       res.status(400).json({ error: 'Current password is incorrect' });
       return;
     }
 
     const newHash = await bcrypt.hash(newPassword, 10);
-    await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .input('passwordHash', sql.NVarChar, newHash)
-      .query(`
-        UPDATE [dbo].[Users]
-        SET PasswordHash = @passwordHash, UpdatedAt = GETDATE()
-        WHERE Id = @id;
-      `);
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        password_hash: newHash,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.user.userId);
+
+    if (updateError) {
+      throw updateError;
+    }
 
     res.json({ message: 'Password updated successfully' });
   } catch (error: any) {
@@ -452,35 +442,60 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
       return;
     }
 
-    const pool = await getDbConnection();
-    const result = await pool
-      .request()
-      .input('userId', sql.Int, req.user.userId)
-      .query(`
-        SELECT r.Id,
-               r.RoomId,
-               r.StartDate,
-               r.EndDate,
-               r.Status,
-               r.TotalPrice,
-               r.GuestFirstName,
-               r.GuestLastName,
-               r.GuestEmail,
-               r.GuestPhone,
-               r.Notes,
-               r.CreatedAt,
-               r.CanceledAt,
-               r.CanceledBy,
-               rm.Name AS RoomName,
-               rm.Type AS RoomType,
-               rm.BasePrice
-        FROM [dbo].[Reservations] r
-        LEFT JOIN [dbo].[Rooms] rm ON rm.Id = r.RoomId
-        WHERE r.UserId = @userId
-        ORDER BY r.StartDate DESC, r.CreatedAt DESC
-      `);
+    const supabase = await getDbConnection();
+    const { data: reservations, error } = await supabase
+      .from('reservations')
+      .select(`
+        id,
+        room_id,
+        start_date,
+        end_date,
+        status,
+        total_price,
+        guest_first_name,
+        guest_last_name,
+        guest_email,
+        guest_phone,
+        notes,
+        created_at,
+        canceled_at,
+        canceled_by,
+        rooms:room_id (
+          name,
+          type,
+          base_price
+        )
+      `)
+      .eq('user_id', req.user.userId)
+      .order('start_date', { ascending: false })
+      .order('created_at', { ascending: false });
 
-    res.json(result.recordset);
+    if (error) {
+      throw error;
+    }
+
+    // Transform the data to match expected format
+    const transformed = reservations?.map((r: any) => ({
+      Id: r.id,
+      RoomId: r.room_id,
+      StartDate: r.start_date,
+      EndDate: r.end_date,
+      Status: r.status,
+      TotalPrice: r.total_price,
+      GuestFirstName: r.guest_first_name,
+      GuestLastName: r.guest_last_name,
+      GuestEmail: r.guest_email,
+      GuestPhone: r.guest_phone,
+      Notes: r.notes,
+      CreatedAt: r.created_at,
+      CanceledAt: r.canceled_at,
+      CanceledBy: r.canceled_by,
+      RoomName: r.rooms?.name,
+      RoomType: r.rooms?.type,
+      BasePrice: r.rooms?.base_price
+    })) || [];
+
+    res.json(transformed);
   } catch (error: any) {
     console.error('User reservations error:', error);
     res.status(500).json({ error: 'Failed to load reservations', details: error.message });

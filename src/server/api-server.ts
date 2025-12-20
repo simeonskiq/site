@@ -2,8 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import sql from 'mssql';
-import { getDbConnection } from './db.config';
+import { getDbConnection, initializeDatabase } from './db.config';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
@@ -202,18 +201,16 @@ async function logAudit(
   details?: string
 ): Promise<void> {
   try {
-    const pool = await getDbConnection();
-    await pool
-      .request()
-      .input('userId', sql.Int, userId)
-      .input('action', sql.NVarChar, action)
-      .input('entityType', sql.NVarChar, entityType)
-      .input('entityId', sql.Int, entityId)
-      .input('details', sql.NVarChar, details || null)
-      .query(
-        `INSERT INTO [dbo].[AuditLogs] (UserId, Action, EntityType, EntityId, Details)
-         VALUES (@userId, @action, @entityType, @entityId, @details)`
-      );
+    const supabase = await getDbConnection();
+    await supabase
+      .from('audit_logs')
+      .insert({
+        user_id: userId,
+        action: action,
+        entity_type: entityType,
+        entity_id: entityId,
+        details: details || null
+      });
   } catch (error) {
     console.error('Failed to write audit log:', error);
   }
@@ -237,24 +234,25 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    let pool;
+    let supabase;
     try {
-      pool = await getDbConnection();
+      supabase = await getDbConnection();
     } catch (dbError: any) {
       console.error('Database connection failed:', dbError);
       return res.status(500).json({ 
-        error: 'Database connection failed. Please check your database configuration and ensure SQL Server is running.',
+        error: 'Database connection failed. Please check your Supabase configuration.',
         details: process.env['NODE_ENV'] === 'development' ? dbError.message : undefined
       });
     }
 
     // Check if user already exists
-    const checkUserQuery = `SELECT Id FROM [dbo].[Users] WHERE Email = @email`;
-    const checkResult = await pool.request()
-      .input('email', sql.NVarChar, email)
-      .query(checkUserQuery);
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
 
-    if (checkResult.recordset.length > 0) {
+    if (existingUser) {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
 
@@ -262,25 +260,25 @@ app.post('/api/auth/register', async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Insert new user
-    const insertQuery = `
-      INSERT INTO [dbo].[Users] (Email, PasswordHash, FirstName, LastName, Phone)
-      OUTPUT INSERTED.Id, INSERTED.Email, INSERTED.FirstName, INSERTED.LastName, INSERTED.Phone, INSERTED.CreatedAt
-      VALUES (@email, @passwordHash, @firstName, @lastName, @phone)
-    `;
+    const { data: user, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        email: email,
+        password_hash: passwordHash,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone: phone || null
+      })
+      .select('id, email, first_name, last_name, phone, created_at')
+      .single();
 
-    const result = await pool.request()
-      .input('email', sql.NVarChar, email)
-      .input('passwordHash', sql.NVarChar, passwordHash)
-      .input('firstName', sql.NVarChar, firstName || null)
-      .input('lastName', sql.NVarChar, lastName || null)
-      .input('phone', sql.NVarChar, phone || null)
-      .query(insertQuery);
-
-    const user = result.recordset[0];
+    if (insertError || !user) {
+      throw insertError || new Error('Failed to create user');
+    }
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.Id, email: user.Email },
+      { userId: user.id, email: user.email },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -288,11 +286,11 @@ app.post('/api/auth/register', async (req, res) => {
     res.status(201).json({
       message: 'User registered successfully',
       user: {
-        id: user.Id,
-        email: user.Email,
-        firstName: user.FirstName,
-        lastName: user.LastName,
-        phone: user.Phone
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone: user.phone
       },
       token
     });
@@ -308,14 +306,12 @@ app.post('/api/auth/register', async (req, res) => {
     }
     
     // Check for specific database errors
-    if (error.code === 'ELOGIN' || error.message?.includes('Login failed')) {
-      errorMessage = 'Database authentication failed. Please check your database credentials.';
-    } else if (error.code === 'ETIMEOUT' || error.message?.includes('timeout')) {
-      errorMessage = 'Database connection timeout. Please check if SQL Server is running.';
-    } else if (error.message?.includes('Cannot open database')) {
-      errorMessage = 'Database does not exist. Please create the database first.';
-    } else if (error.message?.includes('ENOTFOUND') || error.message?.includes('getaddrinfo')) {
-      errorMessage = 'Cannot connect to database server. Please check the server name and ensure SQL Server is running.';
+    if (error.code === 'PGRST301' || error.message?.includes('duplicate key')) {
+      errorMessage = 'User with this email already exists.';
+    } else if (error.code === 'PGRST116') {
+      errorMessage = 'Database table does not exist. Please run migrations.';
+    } else if (error.message?.includes('connection') || error.message?.includes('timeout')) {
+      errorMessage = 'Database connection failed. Please check your Supabase configuration.';
     }
     
     res.status(500).json({ 
@@ -336,36 +332,30 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    let pool;
+    let supabase;
     try {
-      pool = await getDbConnection();
+      supabase = await getDbConnection();
     } catch (dbError: any) {
       console.error('Database connection failed:', dbError);
       return res.status(500).json({ 
-        error: 'Database connection failed. Please check your database configuration and ensure SQL Server is running.',
+        error: 'Database connection failed. Please check your Supabase configuration.',
         details: process.env['NODE_ENV'] === 'development' ? dbError.message : undefined
       });
     }
 
     // Find user by email
-    const findUserQuery = `
-      SELECT Id, Email, PasswordHash, FirstName, LastName, Phone, Role, CreatedAt
-      FROM [dbo].[Users]
-      WHERE Email = @email
-    `;
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, password_hash, first_name, last_name, phone, role, created_at')
+      .eq('email', email)
+      .single();
 
-    const result = await pool.request()
-      .input('email', sql.NVarChar, email)
-      .query(findUserQuery);
-
-    if (result.recordset.length === 0) {
+    if (userError || !user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const user = result.recordset[0];
-
     // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.PasswordHash);
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -373,9 +363,9 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Generate JWT token
     const tokenPayload: JwtPayload = {
-      userId: user.Id,
-      email: user.Email,
-      role: user.Role || 'User'
+      userId: user.id,
+      email: user.email,
+      role: user.role || 'User'
     };
 
     const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
@@ -383,12 +373,12 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({
       message: 'Login successful',
       user: {
-        id: user.Id,
-        email: user.Email,
-        firstName: user.FirstName,
-        lastName: user.LastName,
-        phone: user.Phone,
-        role: user.Role
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        phone: user.phone,
+        role: user.role
       },
       token
     });
@@ -414,28 +404,24 @@ app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const pool = await getDbConnection();
-    const result = await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .query(`
-        SELECT Id, Email, FirstName, LastName, Phone, Role
-        FROM [dbo].[Users]
-        WHERE Id = @id
-      `);
+    const supabase = await getDbConnection();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name, phone, role')
+      .eq('id', req.user.userId)
+      .single();
 
-    if (!result.recordset.length) {
+    if (error || !user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const user = result.recordset[0];
     res.json({
-      id: user.Id,
-      email: user.Email,
-      firstName: user.FirstName,
-      lastName: user.LastName,
-      phone: user.Phone,
-      role: user.Role
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone,
+      role: user.role
     });
   } catch (error: any) {
     console.error('Get profile error:', error);
@@ -455,31 +441,30 @@ app.put('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
       phone?: string;
     };
 
-    const pool = await getDbConnection();
-    const result = await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .input('firstName', sql.NVarChar, firstName || null)
-      .input('lastName', sql.NVarChar, lastName || null)
-      .input('phone', sql.NVarChar, phone || null)
-      .query(`
-        UPDATE [dbo].[Users]
-        SET FirstName = @firstName,
-            LastName = @lastName,
-            Phone = @phone,
-            UpdatedAt = GETDATE()
-        WHERE Id = @id;
-        SELECT Id, Email, FirstName, LastName, Phone, Role FROM [dbo].[Users] WHERE Id = @id;
-      `);
+    const supabase = await getDbConnection();
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({
+        first_name: firstName || null,
+        last_name: lastName || null,
+        phone: phone || null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.user.userId)
+      .select('id, email, first_name, last_name, phone, role')
+      .single();
 
-    const user = result.recordset[0];
+    if (error || !user) {
+      throw error || new Error('Failed to update user');
+    }
+
     res.json({
-      id: user.Id,
-      email: user.Email,
-      firstName: user.FirstName,
-      lastName: user.LastName,
-      phone: user.Phone,
-      role: user.Role
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone,
+      role: user.role
     });
   } catch (error: any) {
     console.error('Update profile error:', error);
@@ -498,38 +483,41 @@ app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    const pool = await getDbConnection();
+    const supabase = await getDbConnection();
 
     // Ensure email is not already taken
-    const exists = await pool
-      .request()
-      .input('email', sql.NVarChar, email)
-      .query(
-        `SELECT Id FROM [dbo].[Users] WHERE Email = @email AND Id <> ${req.user.userId}`
-      );
-    if (exists.recordset.length) {
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .neq('id', req.user.userId)
+      .single();
+
+    if (existingUser) {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    const result = await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .input('email', sql.NVarChar, email)
-      .query(`
-        UPDATE [dbo].[Users]
-        SET Email = @email, UpdatedAt = GETDATE()
-        WHERE Id = @id;
-        SELECT Id, Email, FirstName, LastName, Phone, Role FROM [dbo].[Users] WHERE Id = @id;
-      `);
+    const { data: user, error } = await supabase
+      .from('users')
+      .update({
+        email: email,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.user.userId)
+      .select('id, email, first_name, last_name, phone, role')
+      .single();
 
-    const user = result.recordset[0];
+    if (error || !user) {
+      throw error || new Error('Failed to update email');
+    }
+
     res.json({
-      id: user.Id,
-      email: user.Email,
-      firstName: user.FirstName,
-      lastName: user.LastName,
-      phone: user.Phone,
-      role: user.Role
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      phone: user.phone,
+      role: user.role
     });
   } catch (error: any) {
     console.error('Update email error:', error);
@@ -557,36 +545,34 @@ app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res) => {
         .json({ error: 'New password must be at least 6 characters long' });
     }
 
-    const pool = await getDbConnection();
-    const userResult = await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .query(`
-        SELECT Id, PasswordHash
-        FROM [dbo].[Users]
-        WHERE Id = @id
-      `);
+    const supabase = await getDbConnection();
+    const { data: dbUser, error: userError } = await supabase
+      .from('users')
+      .select('id, password_hash')
+      .eq('id', req.user.userId)
+      .single();
 
-    if (!userResult.recordset.length) {
+    if (userError || !dbUser) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const dbUser = userResult.recordset[0];
-    const isValid = await bcrypt.compare(currentPassword, dbUser.PasswordHash);
+    const isValid = await bcrypt.compare(currentPassword, dbUser.password_hash);
     if (!isValid) {
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
 
     const newHash = await bcrypt.hash(newPassword, 10);
-    await pool
-      .request()
-      .input('id', sql.Int, req.user.userId)
-      .input('passwordHash', sql.NVarChar, newHash)
-      .query(`
-        UPDATE [dbo].[Users]
-        SET PasswordHash = @passwordHash, UpdatedAt = GETDATE()
-        WHERE Id = @id;
-      `);
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({
+        password_hash: newHash,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', req.user.userId);
+
+    if (updateError) {
+      throw updateError;
+    }
 
     res.json({ message: 'Password updated successfully' });
   } catch (error: any) {
@@ -1427,7 +1413,6 @@ app.get('/api/public/available-rooms', async (req, res) => {
 /**
  * Supabase Storage API Endpoints
  * These endpoints handle file storage operations using Supabase Storage
- * while keeping MSSQL for all database operations
  */
 
 // Upload file endpoint
@@ -1576,15 +1561,15 @@ app.post(
         { upsert: false }
       );
 
-      // Optionally update room record in MSSQL with image URL
+      // Optionally update room record in Supabase with image URL
       // This keeps the database reference while storing the file in Supabase
       try {
-        const pool = await getDbConnection();
-        // You can add an ImageUrl column to Rooms table if needed
-        // await pool.request()
-        //   .input('id', sql.Int, roomId)
-        //   .input('imageUrl', sql.NVarChar, result.url)
-        //   .query('UPDATE [dbo].[Rooms] SET ImageUrl = @imageUrl WHERE Id = @id');
+        const supabase = await getDbConnection();
+        // You can add an image_url column to rooms table if needed
+        // await supabase
+        //   .from('rooms')
+        //   .update({ image_url: result.url })
+        //   .eq('id', roomId);
       } catch (dbError) {
         console.error('Failed to update room image URL in database:', dbError);
         // Continue even if DB update fails
@@ -1623,10 +1608,20 @@ io.on('connection', (socket) => {
   });
 });
 
+// Initialize database on server start
+initializeDatabase()
+  .then(() => {
+    console.log('✓ Supabase PostgreSQL database initialized');
+  })
+  .catch((error) => {
+    console.error('⚠ Database initialization failed:', error.message);
+    console.log('⚠ Continuing - ensure tables are created via migrations');
+  });
+
 httpServer.listen(port, () => {
   console.log(`API server listening on https://site-lake-alpha.vercel.app:${port}`);
-  console.log('✓ MSSQL database connection ready');
-  console.log('✓ Supabase storage configured (storage only)');
+  console.log('✓ Supabase PostgreSQL database ready');
+  console.log('✓ Supabase storage configured');
   console.log('✓ WebSocket server ready');
 });
 

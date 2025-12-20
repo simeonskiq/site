@@ -41,9 +41,7 @@
               "entry": "src/server.ts"
             },
             "externalDependencies": [
-              "msnodesqlv8",
-              "bcryptjs",
-              "mssql"
+              "bcryptjs"
             ]
           },
           "configurations": {
