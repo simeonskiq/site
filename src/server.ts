@@ -39,6 +39,12 @@ app.use((req, res, next): void => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Debug middleware for API routes (can be removed in production)
+app.use('/api/*', (req, res, next) => {
+  console.log(`[API] ${req.method} ${req.path}`);
+  next();
+});
+
 // JWT secret key (in production, use environment variable)
 const JWT_SECRET = process.env['JWT_SECRET'] || 'npUtks96Wbo1f8mJYd2z1A/79vQPQIaDzbBcQe3GEnsAgFB3xP4rMebrMRYCVw3BiHZfe2LzEFY5F0IXgCZOhA==';
 
@@ -152,7 +158,7 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
   }
 });
 
-// Login endpoint
+// Login endpoint - must be defined before catch-all routes
 app.post('/api/auth/login', async (req, res): Promise<void> => {
   try {
     const { email, password } = req.body;
@@ -221,6 +227,11 @@ app.post('/api/auth/login', async (req, res): Promise<void> => {
 // Health check endpoint
 app.get('/api/health', (req, res): void => {
   res.json({ status: 'ok', message: 'API server is running' });
+});
+
+// Test endpoint to verify API routing works
+app.get('/api/test', (req, res): void => {
+  res.json({ message: 'API routes are working', method: req.method, path: req.path });
 });
 
 /**
@@ -471,20 +482,31 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
 
 /**
  * Serve static files from /browser
+ * Exclude /api routes from static file serving
  */
-app.use(
+app.use((req, res, next) => {
+  // Skip static file serving for API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
   express.static(browserDistFolder, {
     maxAge: '1y',
     index: false,
     redirect: false,
-  }),
-);
+  })(req, res, next);
+});
 
 /**
  * Handle all other requests by rendering the Angular application.
  * This should be last to catch all non-API routes.
+ * Explicitly exclude /api routes to ensure API handlers are matched first.
  */
-app.use('/**', (req, res, next) => {
+app.use((req, res, next) => {
+  // Skip Angular rendering for API routes
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
   angularApp
     .handle(req)
     .then((response) =>
