@@ -12,6 +12,9 @@
     "serve:ssr:site": "node dist/site/server/server.mjs"
   },
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@angular/animations": "^19.2.2",
     "@angular/cdk": "^19.2.3",

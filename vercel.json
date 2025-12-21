@@ -2,11 +2,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist/site/browser",
   "framework": null,
-  "functions": {
-    "dist/site/server/server.mjs": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",
