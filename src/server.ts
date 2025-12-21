@@ -9,7 +9,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getDbConnection } from './server/db.config.js';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -73,7 +73,7 @@ interface AuthRequest extends express.Request {
   user?: JwtPayload;
 }
 
-const authMiddleware: express.RequestHandler = (
+const authMiddleware: express.RequestHandler = async (
   req: AuthRequest,
   res: express.Response,
   next: express.NextFunction
@@ -86,8 +86,11 @@ const authMiddleware: express.RequestHandler = (
 
   const token = authHeader.substring('Bearer '.length);
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    (req as AuthRequest).user = decoded;
+    // jose.jwtVerify is async and works with Edge runtime
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jose.jwtVerify(token, secret);
+    // Cast through unknown first to satisfy TypeScript type checking
+    (req as AuthRequest).user = payload as unknown as JwtPayload;
     next();
     return;
   } catch (err) {
@@ -150,12 +153,13 @@ app.post('/api/auth/register', async (req, res): Promise<void> => {
       throw insertError || new Error('Failed to create user');
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    // Generate JWT token using jose (Edge runtime compatible)
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const token = await new jose.SignJWT({ userId: user.id, email: user.email })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('7d')
+      .sign(secret);
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -217,14 +221,19 @@ app.post('/api/auth/login', async (req, res): Promise<void> => {
       return;
     }
 
-    // Generate JWT token
+    // Generate JWT token using jose (Edge runtime compatible)
     const tokenPayload = {
       userId: user.id,
       email: user.email,
       role: user.role || 'User'
     };
 
-    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '7d' });
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const token = await new jose.SignJWT(tokenPayload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setIssuedAt()
+      .setExpirationTime('7d')
+      .sign(secret);
 
     res.json({
       message: 'Login successful',
@@ -526,16 +535,6 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
   }
 });
 
-/**
- * Catch-all for unmatched API routes - must come after all API route definitions
- * This ensures API routes that don't match return 404, not Angular router errors
- * Note: This will only match if no previous route handler matched
- * IMPORTANT: Use app.use instead of app.all to ensure it catches all methods
- */
-// Catch-all for unmatched API routes - must NOT call next() to prevent falling through to Angular handler
-// Using app.all() to explicitly match all HTTP methods
-// Catch-all for unmatched API routes - CRITICAL: Must use app.all() not app.use()
-// app.all() matches all HTTP methods but only if no previous route matched
 app.all('/api/*', (req, res) => {
   // If we reach here, the API route wasn't matched by any handler above
   console.log('[API 404] Unmatched API route:', req.method, req.path, req.url, req.originalUrl);
@@ -636,26 +635,4 @@ console.log('[SERVER INIT] Registered API routes:', [
   'GET /api/user/reservations'
 ]);
 
-/**
- * Custom request handler for Vercel that ensures API routes are handled BEFORE Angular SSR.
- * This is critical because on Vercel, Angular SSR's createNodeRequestHandler may intercept
- * POST requests before they reach Express routes.
- */
-export const reqHandler = async (req: any, res: any) => {
-  // CRITICAL: Check if this is an API route BEFORE Angular SSR processes it
-  // This ensures POST requests to /api/* are handled by Express, not Angular
-  const isApiRoute = req.url?.startsWith('/api/') || 
-                     req.path?.startsWith('/api/') || 
-                     req.originalUrl?.startsWith('/api/');
-  
-  if (isApiRoute) {
-    // Handle API routes directly with Express - bypass Angular SSR completely
-    // This is necessary because Angular SSR may not properly handle POST requests
-    console.log('[Vercel Handler] API route detected, routing to Express:', req.method, req.url);
-    return app(req, res);
-  }
-  
-  // For non-API routes, use Angular SSR handler
-  const angularHandler = createNodeRequestHandler(app);
-  return angularHandler(req, res);
-};
+export const reqHandler = createNodeRequestHandler(app);
