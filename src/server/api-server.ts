@@ -4,7 +4,7 @@ import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { getDbConnection, initializeDatabase } from './db.config';
 import bcrypt from 'bcryptjs';
-import * as jose from 'jose';
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import nodemailer from 'nodemailer';
 import multer from 'multer';
 import {
@@ -159,9 +159,8 @@ const authMiddleware: express.RequestHandler = async (
 
   const token = authHeader.substring('Bearer '.length);
   try {
-    // jose.jwtVerify is async and works with Edge runtime
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const { payload } = await jose.jwtVerify(token, secret);
+    // jwtVerify works with Edge runtime - encode secret as Uint8Array
+    const { payload } = await jwtVerify(token, new TextEncoder().encode(JWT_SECRET));
     // Cast through unknown first to satisfy TypeScript type checking
     (req as AuthRequest).user = payload as unknown as JwtPayload;
     next();
@@ -280,12 +279,14 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Generate JWT token using jose (Edge runtime compatible)
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const token = await new jose.SignJWT({ userId: user.id, email: user.email })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('7d')
-      .sign(secret);
+    const iat = Math.floor(Date.now() / 1000);
+    const exp = iat + 60 * 60 * 24 * 7; // 7 days
+    const token = await new SignJWT({ userId: user.id, email: user.email })
+      .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+      .setExpirationTime(exp)
+      .setIssuedAt(iat)
+      .setNotBefore(iat)
+      .sign(new TextEncoder().encode(JWT_SECRET));
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -366,19 +367,21 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Generate JWT token
-    const tokenPayload: JwtPayload = {
+    const tokenPayload = {
       userId: user.id,
       email: user.email,
       role: user.role || 'User'
     };
 
     // Generate JWT token using jose (Edge runtime compatible)
-    const secret = new TextEncoder().encode(JWT_SECRET);
-    const token = await new jose.SignJWT(tokenPayload)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('7d')
-      .sign(secret);
+    const iat = Math.floor(Date.now() / 1000);
+    const exp = iat + 60 * 60 * 24 * 7; // 7 days
+    const token = await new SignJWT(tokenPayload as JWTPayload)
+      .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+      .setExpirationTime(exp)
+      .setIssuedAt(iat)
+      .setNotBefore(iat)
+      .sign(new TextEncoder().encode(JWT_SECRET));
 
     res.json({
       message: 'Login successful',
