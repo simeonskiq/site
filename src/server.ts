@@ -639,4 +639,22 @@ console.log('[SERVER INIT] Registered API routes:', [
   'GET /api/user/reservations'
 ]);
 
-export const reqHandler = createNodeRequestHandler(app);
+const angularHandler = createNodeRequestHandler(app);
+
+export const reqHandler = (req: any, res: any, next?: any) => {
+
+  const isApiRoute = req.url?.startsWith('/api/') || 
+                     req.path?.startsWith('/api/') || 
+                     req.originalUrl?.startsWith('/api/');
+  
+  if (isApiRoute) {
+
+    console.log('[Vercel Handler] Routing API request to Express:', req.method, req.url);
+
+    app(req, res, next);
+    return;
+  }
+  
+
+  return angularHandler(req, res, next);
+};
