@@ -229,11 +229,11 @@ app.post('/api/auth/register', async (req, res) => {
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      res.status(400).json({ error: 'Email and password are required' });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+      res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
     let supabase;
@@ -241,10 +241,11 @@ app.post('/api/auth/register', async (req, res) => {
       supabase = await getDbConnection();
     } catch (dbError: any) {
       console.error('Database connection failed:', dbError);
-      return res.status(500).json({ 
+      res.status(500).json({ 
         error: 'Database connection failed. Please check your Supabase configuration.',
         details: process.env['NODE_ENV'] === 'development' ? dbError.message : undefined
       });
+      return;
     }
 
     // Check if user already exists
@@ -255,7 +256,8 @@ app.post('/api/auth/register', async (req, res) => {
       .single();
 
     if (existingUser) {
-      return res.status(409).json({ error: 'User with this email already exists' });
+      res.status(409).json({ error: 'User with this email already exists' });
+      return;
     }
 
     // Hash password
@@ -334,7 +336,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      res.status(400).json({ error: 'Email and password are required' });
     }
 
     let supabase;
@@ -342,10 +344,11 @@ app.post('/api/auth/login', async (req, res) => {
       supabase = await getDbConnection();
     } catch (dbError: any) {
       console.error('Database connection failed:', dbError);
-      return res.status(500).json({ 
+      res.status(500).json({ 
         error: 'Database connection failed. Please check your Supabase configuration.',
         details: process.env['NODE_ENV'] === 'development' ? dbError.message : undefined
       });
+      return;
     }
 
     // Find user by email
@@ -356,14 +359,16 @@ app.post('/api/auth/login', async (req, res) => {
       .single();
 
     if (userError || !user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid email or password' });
+      return;
     }
 
     // Generate JWT token
@@ -411,10 +416,11 @@ app.get('/api/health', (req, res) => {
 /**
  * User profile endpoints
  */
-app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
+app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const supabase = await getDbConnection();
@@ -425,7 +431,8 @@ app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
       .single();
 
     if (error || !user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     res.json({
@@ -442,10 +449,11 @@ app.get('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-app.put('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
+app.put('/api/user/profile', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const { firstName, lastName, phone } = req.body as {
@@ -485,15 +493,16 @@ app.put('/api/user/profile', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res) => {
+app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const { email } = req.body as { email?: string };
     if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+      res.status(400).json({ error: 'Email is required' });
     }
 
     const supabase = await getDbConnection();
@@ -507,7 +516,7 @@ app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res) => {
       .single();
 
     if (existingUser) {
-      return res.status(409).json({ error: 'Email already in use' });
+      res.status(500).json({ error: 'Email already in use' });
     }
 
     const { data: user, error } = await supabase
@@ -538,10 +547,11 @@ app.put('/api/user/email', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res) => {
+app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const { currentPassword, newPassword } = req.body as {
@@ -550,12 +560,12 @@ app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res) => {
     };
 
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Current and new password are required' });
+      res.status(400).json({ error: 'Current and new password are required' });
+      return;
     }
-    if (newPassword.length < 6) {
-      return res
-        .status(400)
-        .json({ error: 'New password must be at least 6 characters long' });
+    if (newPassword && newPassword.length < 6) {
+      res.status(400).json({ error: 'New password must be at least 6 characters long' });
+      return;
     }
 
     const supabase = await getDbConnection();
@@ -566,12 +576,19 @@ app.put('/api/user/password', authMiddleware, async (req: AuthRequest, res) => {
       .single();
 
     if (userError || !dbUser) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return;
     }
 
     const isValid = await bcrypt.compare(currentPassword, dbUser.password_hash);
     if (!isValid) {
-      return res.status(400).json({ error: 'Current password is incorrect' });
+      res.status(400).json({ error: 'Current password is incorrect' });
+      return;
+    }
+
+    if (!newPassword) {
+      res.status(400).json({ error: 'New password is required' });
+      return;
     }
 
     const newHash = await bcrypt.hash(newPassword, 10);
@@ -748,7 +765,7 @@ app.post(
   '/api/admin/reservations/:id/status',
   authMiddleware,
   requireRole(['Support', 'Manager', 'SuperAdmin']),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     const reservationId = Number(req.params['id']);
     const { status } = req.body as { status?: string };
 
@@ -756,7 +773,7 @@ app.post(
       !status ||
       !['Pending', 'Approved', 'Rejected', 'Cancelled', 'Completed'].includes(status)
     ) {
-      return res.status(400).json({ error: 'Invalid status' });
+      res.status(400).json({ error: 'Invalid status' });
     }
 
     try {
@@ -782,7 +799,8 @@ app.post(
         .single();
 
       if (updateError || !updatedReservation) {
-        return res.status(404).json({ error: 'Reservation not found' });
+        res.status(404).json({ error: 'Reservation not found' });
+        return;
       }
 
       if (req.user) {
@@ -819,15 +837,18 @@ app.post(
 
       // Send email notification if status changed to Approved, Rejected, or Cancelled
       if (reservationData && mailTransporter) {
-        const userEmail = reservationData.users?.email || reservationData.guest_email;
-        const userName = reservationData.users 
-          ? `${reservationData.users.first_name || ''} ${reservationData.users.last_name || ''}`.trim()
+        // Supabase joins return arrays, so we need to access the first element
+        const user = Array.isArray(reservationData.users) ? reservationData.users[0] : reservationData.users;
+        const room = Array.isArray(reservationData.rooms) ? reservationData.rooms[0] : reservationData.rooms;
+        const userEmail = user?.email || reservationData.guest_email;
+        const userName = user 
+          ? `${user.first_name || ''} ${user.last_name || ''}`.trim()
           : `${reservationData.guest_first_name || ''} ${reservationData.guest_last_name || ''}`.trim() || 'Guest';
-        const roomName = reservationData.rooms?.name || 'Room';
+        const roomName = room?.name || 'Room';
         const checkIn = new Date(reservationData.start_date).toLocaleDateString();
         const checkOut = new Date(reservationData.end_date).toLocaleDateString();
 
-        if (userEmail && ['Approved', 'Rejected', 'Cancelled'].includes(status)) {
+        if (userEmail && status && ['Approved', 'Rejected', 'Cancelled'].includes(status)) {
           try {
             let subject = '';
             let textBody = '';
@@ -902,16 +923,17 @@ app.post(
   '/api/admin/reservations/:id/notes',
   authMiddleware,
   requireRole(['Support', 'Manager', 'SuperAdmin']),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     const reservationId = Number(req.params['id']);
     const { note } = req.body as { note?: string };
 
     if (!note || !note.trim()) {
-      return res.status(400).json({ error: 'Note is required' });
+      res.status(400).json({ error: 'Note is required' });
     }
 
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     try {
@@ -962,7 +984,7 @@ app.put(
   '/api/admin/reservations/:id',
   authMiddleware,
   requireRole(['Manager', 'SuperAdmin']),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     const reservationId = Number(req.params['id']);
     const { startDate, endDate, roomId } = req.body as {
       startDate?: string;
@@ -971,9 +993,8 @@ app.put(
     };
 
     if (!startDate && !endDate && !roomId) {
-      return res
-        .status(400)
-        .json({ error: 'Nothing to update. Provide startDate, endDate or roomId.' });
+      res.status(400).json({ error: 'Nothing to update. Provide startDate, endDate or roomId.' });
+      return;
     }
 
     try {
@@ -1000,7 +1021,8 @@ app.put(
         .single();
 
       if (updateError || !reservation) {
-        return res.status(404).json({ error: 'Reservation not found' });
+        res.status(404).json({ error: 'Reservation not found' });
+        return;
       }
 
       if (req.user) {
@@ -1099,12 +1121,12 @@ app.post(
   '/api/admin/rooms/:id/status',
   authMiddleware,
   requireRole(['Manager', 'SuperAdmin']),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     const roomId = Number(req.params['id']);
     const { status } = req.body as { status?: string };
 
     if (!status || !['Available', 'Reserved', 'Blocked', 'Maintenance'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
+      res.status(400).json({ error: 'Invalid status' });
     }
 
     try {
@@ -1120,7 +1142,8 @@ app.post(
         .single();
 
       if (updateError || !updatedRoom) {
-        return res.status(404).json({ error: 'Room not found' });
+        res.status(404).json({ error: 'Room not found' });
+        return;
       }
 
       if (req.user) {
@@ -1163,7 +1186,7 @@ app.post(
   '/api/admin/rooms/:id/block',
   authMiddleware,
   requireRole(['Manager', 'SuperAdmin']),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     const roomId = Number(req.params['id']);
     const { startDate, endDate, isPermanent, reason } = req.body as {
       startDate?: string;
@@ -1173,13 +1196,13 @@ app.post(
     };
 
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     if (!isPermanent && (!startDate || !endDate)) {
-      return res
-        .status(400)
-        .json({ error: 'startDate and endDate are required for temporary blocks' });
+      res.status(400).json({ error: 'startDate and endDate are required for temporary blocks' });
+      return;
     }
 
     try {
@@ -1293,7 +1316,7 @@ app.get(
  * Public reservation endpoint used by the booking page.
  * Stores reservation in the Reservations table so it is visible in the admin panel.
  */
-app.post('/api/public/reservations', async (req, res) => {
+app.post('/api/public/reservations', async (req, res): Promise<void> => {
   try {
     const {
       firstName,
@@ -1323,15 +1346,15 @@ app.post('/api/public/reservations', async (req, res) => {
 
     // Email is required; phone is optional
     if (!firstName || !lastName || !email || !startDate || !endDate) {
-      return res.status(400).json({ error: 'Missing required reservation data' });
+      res.status(400).json({ error: 'Missing required reservation data' });
+      return;
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid dates. End date must be after start date.' });
+      res.status(400).json({ error: 'Invalid dates. End date must be after start date.' });
+      return;
     }
 
     const nights = Math.round(
@@ -1366,7 +1389,7 @@ app.post('/api/public/reservations', async (req, res) => {
     // Try to send emails, but do not fail the reservation if email sending fails
     try {
       await sendReservationEmails({
-        guestEmail: email,
+        guestEmail: email!,
         guestName: `${firstName} ${lastName}`,
         guestPhone: phone,
         roomName: roomName || 'Room',
@@ -1393,10 +1416,11 @@ app.post('/api/public/reservations', async (req, res) => {
 /**
  * Authenticated endpoint: get reservations for the logged-in user.
  */
-app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res) => {
+app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const supabase = await getDbConnection();
@@ -1462,10 +1486,11 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res) 
 /**
  * Authenticated endpoint: cancel a reservation (user can only cancel their own).
  */
-app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthRequest, res) => {
+app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
   try {
     if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
     const reservationId = Number(req.params['id']);
@@ -1480,17 +1505,18 @@ app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthReq
       .single();
 
     if (checkError || !reservation) {
-      return res.status(404).json({ error: 'Reservation not found or you do not have permission to cancel it' });
+      res.status(404).json({ error: 'Reservation not found or you do not have permission to cancel it' });
+      return;
     }
     
     // Don't allow canceling already canceled or completed reservations
     if (reservation.status === 'Cancelled' || reservation.status === 'Completed') {
-      return res.status(400).json({ error: `Cannot cancel a reservation with status: ${reservation.status}` });
+      res.status(400).json({ error: `Cannot cancel a reservation with status: ${reservation.status}` });
     }
 
     // Don't allow users to cancel approved reservations
     if (reservation.status === 'Approved') {
-      return res.status(400).json({ error: 'Cannot cancel an approved reservation. Please contact support.' });
+      res.status(400).json({ error: 'Cannot cancel an approved reservation. Please contact support.' });
     }
 
     // Update status to Cancelled and set CanceledAt timestamp and CanceledBy
@@ -1528,20 +1554,20 @@ app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthReq
  * Public endpoint: get available rooms for a date range.
  * Excludes rooms with approved/completed reservations or active blocks overlapping the range.
  */
-app.get('/api/public/available-rooms', async (req, res) => {
+app.get('/api/public/available-rooms', async (req, res): Promise<void> => {
   try {
     const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
 
     if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'startDate and endDate are required' });
+      res.status(400).json({ error: 'startDate and endDate are required' });
+      return;
     }
 
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid dates. End date must be after start date.' });
+      res.status(400).json({ error: 'Invalid dates. End date must be after start date.' });
+      return;
     }
 
     const supabase = await getDbConnection();
@@ -1625,18 +1651,20 @@ app.post(
   authMiddleware,
   requireRole(['Manager', 'SuperAdmin', 'Support']),
   upload.single('file'),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No file provided' });
+        res.status(400).json({ error: 'No file provided' });
+        return;
       }
 
       const { bucket, path } = req.body as { bucket?: string; path?: string };
 
       if (!bucket || !Object.values(STORAGE_BUCKETS).includes(bucket as any)) {
-        return res.status(400).json({
+        res.status(400).json({
           error: 'Invalid bucket. Valid buckets: ' + Object.values(STORAGE_BUCKETS).join(', ')
         });
+        return;
       }
 
       const filePath = path || `${Date.now()}-${req.file.originalname}`;
@@ -1663,19 +1691,19 @@ app.post(
 );
 
 // Delete file endpoint
-app.delete('/api/storage/delete', authMiddleware, requireRole(['Manager', 'SuperAdmin']), async (req: AuthRequest, res) => {
+app.delete('/api/storage/delete', authMiddleware, requireRole(['Manager', 'SuperAdmin']), async (req: AuthRequest, res): Promise<void> => {
   try {
     const { bucket, path } = req.body as { bucket?: string; path?: string };
 
     if (!bucket || !path) {
-      return res.status(400).json({ error: 'Bucket and path are required' });
+      res.status(400).json({ error: 'Bucket and path are required' });
     }
 
     if (!Object.values(STORAGE_BUCKETS).includes(bucket as any)) {
-      return res.status(400).json({ error: 'Invalid bucket' });
+      res.status(400).json({ error: 'Invalid bucket' });
     }
 
-    await deleteFile(bucket, path);
+    await deleteFile(bucket!, path!);
 
     res.json({ message: 'File deleted successfully' });
   } catch (error: any) {
@@ -1685,7 +1713,7 @@ app.delete('/api/storage/delete', authMiddleware, requireRole(['Manager', 'Super
 });
 
 // List files endpoint
-app.get('/api/storage/list', authMiddleware, requireRole(['Manager', 'SuperAdmin', 'Support']), async (req: AuthRequest, res) => {
+app.get('/api/storage/list', authMiddleware, requireRole(['Manager', 'SuperAdmin', 'Support']), async (req: AuthRequest, res): Promise<void> => {
   try {
     const { bucket, path, limit, offset } = req.query as {
       bucket?: string;
@@ -1695,11 +1723,13 @@ app.get('/api/storage/list', authMiddleware, requireRole(['Manager', 'SuperAdmin
     };
 
     if (!bucket) {
-      return res.status(400).json({ error: 'Bucket is required' });
+      res.status(400).json({ error: 'Bucket is required' });
+      return;
     }
 
     if (!Object.values(STORAGE_BUCKETS).includes(bucket as any)) {
-      return res.status(400).json({ error: 'Invalid bucket' });
+      res.status(400).json({ error: 'Invalid bucket' });
+      return;
     }
 
     const files = await listFiles(bucket, path, {
@@ -1721,19 +1751,19 @@ app.get('/api/storage/list', authMiddleware, requireRole(['Manager', 'SuperAdmin
 });
 
 // Get file URL endpoint (public, no auth required for public buckets)
-app.get('/api/storage/url', (req, res) => {
+app.get('/api/storage/url', (req, res): void => {
   try {
     const { bucket, path } = req.query as { bucket?: string; path?: string };
 
     if (!bucket || !path) {
-      return res.status(400).json({ error: 'Bucket and path are required' });
+      res.status(400).json({ error: 'Bucket and path are required' });
     }
 
     if (!Object.values(STORAGE_BUCKETS).includes(bucket as any)) {
-      return res.status(400).json({ error: 'Invalid bucket' });
+      res.status(400).json({ error: 'Invalid bucket' });
     }
 
-    const url = getPublicUrl(bucket, path);
+    const url = getPublicUrl(bucket!, path!);
     res.json({ url });
   } catch (error: any) {
     console.error('Get URL error:', error);
@@ -1747,10 +1777,11 @@ app.post(
   authMiddleware,
   requireRole(['Manager', 'SuperAdmin']),
   upload.single('image'),
-  async (req: AuthRequest, res) => {
+  async (req: AuthRequest, res): Promise<void> => {
     try {
       if (!req.file) {
-        return res.status(400).json({ error: 'No image provided' });
+        res.status(400).json({ error: 'No image provided' });
+        return;
       }
 
       const roomId = Number(req.params['roomId']);
