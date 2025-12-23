@@ -98,6 +98,53 @@ const authMiddleware: express.RequestHandler = async (
   }
 };
 
+const requireRole = (allowedRoles: string[]) => {
+  const middleware: express.RequestHandler = (
+    req: AuthRequest,
+    res: express.Response,
+    next: express.NextFunction
+  ) => {
+    const role = req.user?.role;
+    if (!role) {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+
+    // Role mapping in DB: User, Support, Manager, SuperAdmin
+    if (!allowedRoles.includes(role)) {
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
+    }
+
+    next();
+  };
+
+  return middleware;
+};
+
+async function logAudit(
+  userId: number,
+  action: string,
+  entityType: string,
+  entityId: number,
+  details?: string
+): Promise<void> {
+  try {
+    const supabase = await getDbConnection();
+    await supabase
+      .from('audit_logs')
+      .insert({
+        user_id: userId,
+        action: action,
+        entity_type: entityType,
+        entity_id: entityId,
+        details: details || null
+      });
+  } catch (error) {
+    console.error('Failed to write audit log:', error);
+  }
+}
+
 /**
  * API Routes for Authentication
  */
@@ -539,15 +586,911 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
   }
 });
 
+/**
+ * Authenticated endpoint: cancel a reservation (user can only cancel their own).
+ */
+app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthRequest, res): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const reservationId = Number(req.params['id']);
+    const supabase = await getDbConnection();
+    
+    // First verify the reservation belongs to this user
+    const { data: reservation, error: checkError } = await supabase
+      .from('reservations')
+      .select('id, status')
+      .eq('id', reservationId)
+      .eq('user_id', req.user.userId)
+      .single();
+
+    if (checkError || !reservation) {
+      res.status(404).json({ error: 'Reservation not found or you do not have permission to cancel it' });
+      return;
+    }
+    
+    // Don't allow canceling already canceled or completed reservations
+    if (reservation.status === 'Cancelled' || reservation.status === 'Completed') {
+      res.status(400).json({ error: `Cannot cancel a reservation with status: ${reservation.status}` });
+      return;
+    }
+
+    // Don't allow users to cancel approved reservations
+    if (reservation.status === 'Approved') {
+      res.status(400).json({ error: 'Cannot cancel an approved reservation. Please contact support.' });
+      return;
+    }
+
+    // Update status to Cancelled and set CanceledAt timestamp and CanceledBy
+    const { data: cancelledReservation, error: updateError } = await supabase
+      .from('reservations')
+      .update({
+        status: 'Cancelled',
+        canceled_at: new Date().toISOString(),
+        canceled_by: 'User',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', reservationId)
+      .select()
+      .single();
+
+    if (updateError || !cancelledReservation) {
+      throw updateError || new Error('Failed to cancel reservation');
+    }
+
+    res.json(cancelledReservation);
+  } catch (error: any) {
+    console.error('Cancel reservation error:', error);
+    res.status(500).json({ error: 'Failed to cancel reservation', details: error.message });
+  }
+});
+
+/**
+ * Public endpoint: get available rooms for a date range.
+ */
+app.get('/api/public/available-rooms', async (req, res): Promise<void> => {
+  try {
+    const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+
+    if (!startDate || !endDate) {
+      res.status(400).json({ error: 'startDate and endDate are required' });
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      res.status(400).json({ error: 'Invalid dates. End date must be after start date.' });
+      return;
+    }
+
+    const supabase = await getDbConnection();
+    
+    // Get all available rooms
+    const { data: allRooms, error: roomsError } = await supabase
+      .from('rooms')
+      .select('*')
+      .eq('visible_to_users', true)
+      .eq('status', 'Available')
+      .order('name');
+
+    if (roomsError) {
+      throw roomsError;
+    }
+
+    // Get conflicting reservations
+    const { data: conflictingReservations, error: resError } = await supabase
+      .from('reservations')
+      .select('room_id')
+      .in('status', ['Approved', 'Completed'])
+      .neq('status', 'Cancelled')
+      .lt('start_date', endDate)
+      .gt('end_date', startDate);
+
+    if (resError) {
+      throw resError;
+    }
+
+    // Get conflicting blocks
+    const { data: allBlocks, error: blocksError } = await supabase
+      .from('room_blocks')
+      .select('room_id, is_permanent, start_date, end_date');
+
+    if (blocksError) {
+      throw blocksError;
+    }
+
+    // Filter blocks that conflict with the date range
+    const conflictingBlocks = allBlocks?.filter(b => 
+      b.is_permanent || (b.start_date < endDate && b.end_date > startDate)
+    ) || [];
+
+    // Filter out rooms with conflicts
+    const conflictingRoomIds = new Set([
+      ...(conflictingReservations?.map(r => r.room_id) || []),
+      ...(conflictingBlocks?.map(b => b.room_id) || [])
+    ]);
+
+    const availableRooms = allRooms?.filter(room => !conflictingRoomIds.has(room.id)) || [];
+
+    // Transform to match expected format
+    const transformed = availableRooms.map((r: any) => ({
+      Id: r.id,
+      Name: r.name,
+      Type: r.type,
+      BasePrice: r.base_price,
+      Status: r.status,
+      VisibleToUsers: r.visible_to_users,
+      VisibilityRole: r.visibility_role,
+      HasUnresolvedMaintenance: r.has_unresolved_maintenance,
+      CreatedAt: r.created_at,
+      UpdatedAt: r.updated_at
+    }));
+
+    res.json(transformed);
+  } catch (error: any) {
+    console.error('Available rooms error:', error);
+    res.status(500).json({ error: 'Failed to load available rooms', details: error.message });
+  }
+});
+
+/**
+ * Public reservation endpoint used by the booking page.
+ */
+app.post('/api/public/reservations', async (req, res): Promise<void> => {
+  try {
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      roomId,
+      roomName,
+      startDate,
+      endDate,
+      pricePerNight,
+      notes,
+      userId
+    } = req.body as {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      roomId?: number;
+      roomName?: string;
+      startDate?: string;
+      endDate?: string;
+      pricePerNight?: number;
+      notes?: string;
+      userId?: number;
+    };
+
+    // Email is required; phone is optional
+    if (!firstName || !lastName || !email || !startDate || !endDate) {
+      res.status(400).json({ error: 'Missing required reservation data' });
+      return;
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      res.status(400).json({ error: 'Invalid dates. End date must be after start date.' });
+      return;
+    }
+
+    const nights = Math.round(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const totalPrice =
+      pricePerNight && nights > 0 ? pricePerNight * nights : null;
+
+    const supabase = await getDbConnection();
+    const { data: reservation, error: insertError } = await supabase
+      .from('reservations')
+      .insert({
+        user_id: userId ?? null,
+        room_id: roomId ?? null,
+        start_date: startDate,
+        end_date: endDate,
+        status: 'Pending',
+        total_price: totalPrice,
+        guest_first_name: firstName,
+        guest_last_name: lastName,
+        guest_email: email,
+        guest_phone: phone || null,
+        notes: notes || null
+      })
+      .select()
+      .single();
+
+    if (insertError || !reservation) {
+      throw insertError || new Error('Failed to create reservation');
+    }
+
+    res.status(201).json({
+      message: 'Reservation request stored successfully',
+      reservation
+    });
+  } catch (error: any) {
+    console.error('Public reservation error:', error);
+    res
+      .status(500)
+      .json({ error: 'Failed to store reservation', details: error.message });
+  }
+});
+
+/**
+ * Admin APIs
+ * All prefixed with /api/admin and protected by auth + role
+ */
+
+// Simple dashboard overview
+app.get(
+  '/api/admin/dashboard',
+  authMiddleware,
+  requireRole(['Manager', 'SuperAdmin', 'Support']),
+  async (req: AuthRequest, res) => {
+    try {
+      const supabase = await getDbConnection();
+
+      const [pendingReservations, reservations, rooms, blockedRooms] = await Promise.all([
+        supabase
+          .from('reservations')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'Pending'),
+        supabase
+          .from('reservations')
+          .select('id, status, start_date, end_date, room_id')
+          .in('status', ['Approved', 'Completed']),
+        supabase
+          .from('rooms')
+          .select('id'),
+        supabase
+          .from('room_blocks')
+          .select('room_id, is_permanent, start_date, end_date')
+      ]);
+
+      const today = new Date().toISOString().split('T')[0];
+      const activeReservations = reservations.data?.filter(r => 
+        r.start_date <= today && r.end_date >= today
+      ) || [];
+      const occupancyRate = rooms.data && rooms.data.length > 0 
+        ? activeReservations.length / rooms.data.length 
+        : 0;
+
+      const activeBlocks = blockedRooms.data?.filter(b => 
+        b.is_permanent || (b.start_date <= today && b.end_date >= today)
+      ) || [];
+      const uniqueBlockedRooms = new Set(activeBlocks.map(b => b.room_id));
+
+      res.json({
+        totalPendingReservations: pendingReservations.count || 0,
+        occupancyRate: occupancyRate,
+        blockedRoomsCount: uniqueBlockedRooms.size
+      });
+    } catch (error: any) {
+      console.error('Dashboard error:', error);
+      res.status(500).json({ error: 'Failed to load dashboard', details: error.message });
+    }
+  }
+);
+
+// List reservations with optional filters
+app.get(
+  '/api/admin/reservations',
+  authMiddleware,
+  requireRole(['Manager', 'SuperAdmin', 'Support']),
+  async (req: AuthRequest, res) => {
+    try {
+      const supabase = await getDbConnection();
+      const { status, userId, roomId } = req.query;
+
+      let query = supabase
+        .from('reservations')
+        .select(`
+          id,
+          user_id,
+          room_id,
+          start_date,
+          end_date,
+          status,
+          total_price,
+          guest_first_name,
+          guest_last_name,
+          guest_email,
+          guest_phone,
+          created_at,
+          canceled_at,
+          canceled_by,
+          users:user_id (
+            email,
+            first_name,
+            last_name
+          ),
+          rooms:room_id (
+            name
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (status) {
+        query = query.eq('status', status as string);
+      }
+
+      if (userId) {
+        query = query.eq('user_id', Number(userId));
+      }
+
+      if (roomId) {
+        query = query.eq('room_id', Number(roomId));
+      }
+
+      const { data: reservations, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      // Transform data to match expected format
+      const transformed = reservations?.map((r: any) => ({
+        Id: r.id,
+        UserId: r.user_id,
+        RoomId: r.room_id,
+        StartDate: r.start_date,
+        EndDate: r.end_date,
+        Status: r.status,
+        TotalPrice: r.total_price,
+        GuestFirstName: r.guest_first_name,
+        GuestLastName: r.guest_last_name,
+        GuestEmail: r.guest_email,
+        GuestPhone: r.guest_phone,
+        CreatedAt: r.created_at,
+        CanceledAt: r.canceled_at,
+        CanceledBy: r.canceled_by,
+        Email: r.users?.email || r.guest_email,
+        FirstName: r.users?.first_name || r.guest_first_name,
+        LastName: r.users?.last_name || r.guest_last_name,
+        RoomName: r.rooms?.name,
+        DisplayStatus: r.status === 'Cancelled' && r.canceled_by === 'User' 
+          ? 'Canceled by user'
+          : r.status === 'Cancelled' && r.canceled_by === 'Admin'
+          ? 'Canceled by admin'
+          : r.status
+      })) || [];
+
+      res.json(transformed);
+    } catch (error: any) {
+      console.error('List reservations error:', error);
+      res
+        .status(500)
+        .json({ error: 'Failed to load reservations', details: error.message });
+    }
+  }
+);
+
+// Change reservation status (approve / reject / cancel / complete)
+app.post(
+  '/api/admin/reservations/:id/status',
+  authMiddleware,
+  requireRole(['Support', 'Manager', 'SuperAdmin']),
+  async (req: AuthRequest, res): Promise<void> => {
+    const reservationId = Number(req.params['id']);
+    const { status } = req.body as { status?: string };
+
+    if (
+      !status ||
+      !['Pending', 'Approved', 'Rejected', 'Cancelled', 'Completed'].includes(status)
+    ) {
+      res.status(400).json({ error: 'Invalid status' });
+      return;
+    }
+
+    try {
+      const supabase = await getDbConnection();
+      
+      // Prepare update data
+      const updateData: any = {
+        status: status,
+        updated_at: new Date().toISOString()
+      };
+      
+      if (status === 'Cancelled') {
+        updateData.canceled_by = 'Admin';
+        updateData.canceled_at = new Date().toISOString();
+      }
+      
+      // Update reservation
+      const { data: updatedReservation, error: updateError } = await supabase
+        .from('reservations')
+        .update(updateData)
+        .eq('id', reservationId)
+        .select()
+        .single();
+
+      if (updateError || !updatedReservation) {
+        res.status(404).json({ error: 'Reservation not found' });
+        return;
+      }
+
+      if (req.user) {
+        await logAudit(
+          req.user.userId,
+          `Changed reservation status to ${status}`,
+          'Reservation',
+          reservationId
+        );
+      }
+
+      // Transform to match expected format
+      const transformed = {
+        Id: updatedReservation.id,
+        UserId: updatedReservation.user_id,
+        RoomId: updatedReservation.room_id,
+        StartDate: updatedReservation.start_date,
+        EndDate: updatedReservation.end_date,
+        Status: updatedReservation.status,
+        TotalPrice: updatedReservation.total_price,
+        GuestFirstName: updatedReservation.guest_first_name,
+        GuestLastName: updatedReservation.guest_last_name,
+        GuestEmail: updatedReservation.guest_email,
+        GuestPhone: updatedReservation.guest_phone,
+        Notes: updatedReservation.notes,
+        CreatedAt: updatedReservation.created_at,
+        CanceledAt: updatedReservation.canceled_at,
+        CanceledBy: updatedReservation.canceled_by
+      };
+
+      res.json(transformed);
+    } catch (error: any) {
+      console.error('Update reservation status error:', error);
+      res
+        .status(500)
+        .json({ error: 'Failed to update reservation status', details: error.message });
+    }
+  }
+);
+
+// Add internal note to reservation
+app.post(
+  '/api/admin/reservations/:id/notes',
+  authMiddleware,
+  requireRole(['Support', 'Manager', 'SuperAdmin']),
+  async (req: AuthRequest, res): Promise<void> => {
+    const reservationId = Number(req.params['id']);
+    const { note } = req.body as { note?: string };
+
+    if (!note || !note.trim()) {
+      res.status(400).json({ error: 'Note is required' });
+      return;
+    }
+
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    try {
+      const supabase = await getDbConnection();
+      const { data: noteRecord, error: insertError } = await supabase
+        .from('reservation_notes')
+        .insert({
+          reservation_id: reservationId,
+          note: note,
+          created_by_user_id: req.user.userId
+        })
+        .select()
+        .single();
+
+      if (insertError || !noteRecord) {
+        throw insertError || new Error('Failed to add note');
+      }
+
+      await logAudit(
+        req.user.userId,
+        'Added internal note',
+        'Reservation',
+        reservationId,
+        note
+      );
+
+      // Transform to match expected format
+      const transformed = {
+        Id: noteRecord.id,
+        ReservationId: noteRecord.reservation_id,
+        Note: noteRecord.note,
+        CreatedByUserId: noteRecord.created_by_user_id,
+        CreatedAt: noteRecord.created_at
+      };
+
+      res.status(201).json(transformed);
+    } catch (error: any) {
+      console.error('Add reservation note error:', error);
+      res
+        .status(500)
+        .json({ error: 'Failed to add note', details: error.message });
+    }
+  }
+);
+
+// Modify reservation dates or room
+app.put(
+  '/api/admin/reservations/:id',
+  authMiddleware,
+  requireRole(['Manager', 'SuperAdmin']),
+  async (req: AuthRequest, res): Promise<void> => {
+    const reservationId = Number(req.params['id']);
+    const { startDate, endDate, roomId } = req.body as {
+      startDate?: string;
+      endDate?: string;
+      roomId?: number;
+    };
+
+    if (!startDate && !endDate && !roomId) {
+      res.status(400).json({ error: 'Nothing to update. Provide startDate, endDate or roomId.' });
+      return;
+    }
+
+    try {
+      const supabase = await getDbConnection();
+      const updateData: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      if (startDate) {
+        updateData.start_date = startDate;
+      }
+      if (endDate) {
+        updateData.end_date = endDate;
+      }
+      if (roomId) {
+        updateData.room_id = roomId;
+      }
+
+      const { data: reservation, error: updateError } = await supabase
+        .from('reservations')
+        .update(updateData)
+        .eq('id', reservationId)
+        .select()
+        .single();
+
+      if (updateError || !reservation) {
+        res.status(404).json({ error: 'Reservation not found' });
+        return;
+      }
+
+      if (req.user) {
+        await logAudit(
+          req.user.userId,
+          'Modified reservation',
+          'Reservation',
+          reservationId,
+          JSON.stringify({ startDate, endDate, roomId })
+        );
+      }
+
+      // Transform to match expected format
+      const transformed = {
+        Id: reservation.id,
+        UserId: reservation.user_id,
+        RoomId: reservation.room_id,
+        StartDate: reservation.start_date,
+        EndDate: reservation.end_date,
+        Status: reservation.status,
+        TotalPrice: reservation.total_price,
+        GuestFirstName: reservation.guest_first_name,
+        GuestLastName: reservation.guest_last_name,
+        GuestEmail: reservation.guest_email,
+        GuestPhone: reservation.guest_phone,
+        Notes: reservation.notes,
+        CreatedAt: reservation.created_at,
+        CanceledAt: reservation.canceled_at,
+        CanceledBy: reservation.canceled_by
+      };
+
+      res.json(transformed);
+    } catch (error: any) {
+      console.error('Modify reservation error:', error);
+      res
+        .status(500)
+        .json({ error: 'Failed to modify reservation', details: error.message });
+    }
+  }
+);
+
+// Rooms management / visibility / blocking
+app.get(
+  '/api/admin/rooms',
+  authMiddleware,
+  requireRole(['Support', 'Manager', 'SuperAdmin']),
+  async (req: AuthRequest, res) => {
+    try {
+      const supabase = await getDbConnection();
+      const today = new Date().toISOString().split('T')[0];
+
+      const { data: rooms, error: roomsError } = await supabase
+        .from('rooms')
+        .select('*')
+        .order('name');
+
+      const { data: blocks, error: blocksError } = await supabase
+        .from('room_blocks')
+        .select('room_id, is_permanent, start_date, end_date');
+
+      if (roomsError || blocksError) {
+        throw roomsError || blocksError;
+      }
+
+      // Check which rooms are currently blocked
+      const blockedRoomIds = new Set(
+        blocks?.filter(b => 
+          b.is_permanent || (b.start_date <= today && b.end_date >= today)
+        ).map(b => b.room_id) || []
+      );
+
+      // Transform to match expected format
+      const transformed = rooms?.map((r: any) => ({
+        Id: r.id,
+        Name: r.name,
+        Type: r.type,
+        BasePrice: r.base_price,
+        Status: r.status,
+        VisibleToUsers: r.visible_to_users,
+        VisibilityRole: r.visibility_role,
+        HasUnresolvedMaintenance: r.has_unresolved_maintenance,
+        CreatedAt: r.created_at,
+        UpdatedAt: r.updated_at,
+        IsCurrentlyBlocked: blockedRoomIds.has(r.id) ? 1 : 0
+      })) || [];
+
+      res.json(transformed);
+    } catch (error: any) {
+      console.error('List rooms error:', error);
+      res.status(500).json({ error: 'Failed to load rooms', details: error.message });
+    }
+  }
+);
+
+app.post(
+  '/api/admin/rooms/:id/status',
+  authMiddleware,
+  requireRole(['Manager', 'SuperAdmin']),
+  async (req: AuthRequest, res): Promise<void> => {
+    const roomId = Number(req.params['id']);
+    const { status } = req.body as { status?: string };
+
+    if (!status || !['Available', 'Reserved', 'Blocked', 'Maintenance'].includes(status)) {
+      res.status(400).json({ error: 'Invalid status' });
+      return;
+    }
+
+    try {
+      const supabase = await getDbConnection();
+      const { data: updatedRoom, error: updateError } = await supabase
+        .from('rooms')
+        .update({
+          status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', roomId)
+        .select()
+        .single();
+
+      if (updateError || !updatedRoom) {
+        res.status(404).json({ error: 'Room not found' });
+        return;
+      }
+
+      if (req.user) {
+        await logAudit(req.user.userId, `Changed room status to ${status}`, 'Room', roomId);
+      }
+
+      // Transform to match expected format
+      const transformed = {
+        Id: updatedRoom.id,
+        Name: updatedRoom.name,
+        Type: updatedRoom.type,
+        BasePrice: updatedRoom.base_price,
+        Status: updatedRoom.status,
+        VisibleToUsers: updatedRoom.visible_to_users,
+        VisibilityRole: updatedRoom.visibility_role,
+        HasUnresolvedMaintenance: updatedRoom.has_unresolved_maintenance,
+        CreatedAt: updatedRoom.created_at,
+        UpdatedAt: updatedRoom.updated_at
+      };
+
+      res.json(transformed);
+    } catch (error: any) {
+      console.error('Update room status error:', error);
+      res
+        .status(500)
+        .json({ error: 'Failed to update room status', details: error.message });
+    }
+  }
+);
+
+// Block room for specific dates or permanently
+app.post(
+  '/api/admin/rooms/:id/block',
+  authMiddleware,
+  requireRole(['Manager', 'SuperAdmin']),
+  async (req: AuthRequest, res): Promise<void> => {
+    const roomId = Number(req.params['id']);
+    const { startDate, endDate, isPermanent, reason } = req.body as {
+      startDate?: string;
+      endDate?: string;
+      isPermanent?: boolean;
+      reason?: string;
+    };
+
+    if (!req.user) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!isPermanent && (!startDate || !endDate)) {
+      res.status(400).json({ error: 'startDate and endDate are required for temporary blocks' });
+      return;
+    }
+
+    try {
+      const supabase = await getDbConnection();
+      
+      const blockData: any = {
+        room_id: roomId,
+        is_permanent: isPermanent || false,
+        reason: reason || null,
+        created_by_user_id: req.user.userId
+      };
+
+      if (isPermanent) {
+        // For permanent blocks we can set a very wide date range to keep constraints simple
+        blockData.start_date = '2000-01-01';
+        blockData.end_date = '2100-01-01';
+      } else {
+        blockData.start_date = startDate;
+        blockData.end_date = endDate;
+      }
+
+      const { data: blockRecord, error: insertError } = await supabase
+        .from('room_blocks')
+        .insert(blockData)
+        .select()
+        .single();
+
+      if (insertError || !blockRecord) {
+        throw insertError || new Error('Failed to block room');
+      }
+
+      await logAudit(
+        req.user.userId,
+        isPermanent ? 'Permanently blocked room' : 'Temporarily blocked room',
+        'Room',
+        roomId,
+        JSON.stringify({ startDate, endDate, reason })
+      );
+
+      // Transform to match expected format
+      const transformed = {
+        Id: blockRecord.id,
+        RoomId: blockRecord.room_id,
+        StartDate: blockRecord.start_date,
+        EndDate: blockRecord.end_date,
+        IsPermanent: blockRecord.is_permanent,
+        Reason: blockRecord.reason,
+        CreatedByUserId: blockRecord.created_by_user_id,
+        CreatedAt: blockRecord.created_at
+      };
+
+      res.status(201).json(transformed);
+    } catch (error: any) {
+      console.error('Block room error:', error);
+      res.status(500).json({ error: 'Failed to block room', details: error.message });
+    }
+  }
+);
+
+// Simple calendar view data
+app.get(
+  '/api/admin/calendar',
+  authMiddleware,
+  requireRole(['Support', 'Manager', 'SuperAdmin']),
+  async (req: AuthRequest, res) => {
+    try {
+      const supabase = await getDbConnection();
+
+      const { data: reservations, error: resError } = await supabase
+        .from('reservations')
+        .select('id, room_id, start_date, end_date, status');
+
+      const { data: blocks, error: blocksError } = await supabase
+        .from('room_blocks')
+        .select('id, room_id, start_date, end_date, is_permanent, reason');
+
+      if (resError || blocksError) {
+        throw resError || blocksError;
+      }
+
+      // Transform to match expected format
+      const transformedReservations = reservations?.map((r: any) => ({
+        Id: r.id,
+        RoomId: r.room_id,
+        StartDate: r.start_date,
+        EndDate: r.end_date,
+        Status: r.status
+      })) || [];
+
+      const transformedBlocks = blocks?.map((b: any) => ({
+        Id: b.id,
+        RoomId: b.room_id,
+        StartDate: b.start_date,
+        EndDate: b.end_date,
+        IsPermanent: b.is_permanent,
+        Reason: b.reason
+      })) || [];
+
+      res.json({
+        reservations: transformedReservations,
+        blocks: transformedBlocks
+      });
+    } catch (error: any) {
+      console.error('Calendar data error:', error);
+      res.status(500).json({ error: 'Failed to load calendar data', details: error.message });
+    }
+  }
+);
+
 app.all('/api/*', (req, res) => {
   // If we reach here, the API route wasn't matched by any handler above
-  console.log('[API 404] Unmatched API route:', req.method, req.path, req.url, req.originalUrl);
-  res.status(404).json({ 
-    error: 'API endpoint not found', 
-    path: req.path, 
-    method: req.method,
-    message: `No ${req.method} handler found for ${req.path}`
+  // Check if this is a known route with wrong method (405) or unknown route (404)
+  const knownRoutes = [
+    '/api/auth/register',
+    '/api/auth/login',
+    '/api/health',
+    '/api/test',
+    '/api/user/profile',
+    '/api/user/email',
+    '/api/user/password',
+    '/api/user/reservations',
+    '/api/public/available-rooms',
+    '/api/public/reservations',
+    '/api/admin/dashboard',
+    '/api/admin/reservations',
+    '/api/admin/calendar',
+    '/api/admin/rooms'
+  ];
+  
+  // Check if path matches a known route pattern (without method)
+  const pathMatchesKnownRoute = knownRoutes.some(route => {
+    // Handle parameterized routes
+    if (route.includes(':id')) {
+      const basePath = route.split(':')[0];
+      return req.path.startsWith(basePath);
+    }
+    return req.path === route || req.path.startsWith(route + '/');
   });
+  
+  if (pathMatchesKnownRoute) {
+    // Route exists but method not allowed - return 405
+    console.log('[API 405] Method not allowed:', req.method, req.path);
+    res.status(405).json({ 
+      error: 'Method Not Allowed',
+      path: req.path, 
+      method: req.method,
+      message: `Method ${req.method} is not allowed for ${req.path}`
+    });
+  } else {
+    // Route doesn't exist - return 404
+    console.log('[API 404] Endpoint not found:', req.method, req.path);
+    res.status(404).json({ 
+      error: 'API endpoint not found', 
+      path: req.path, 
+      method: req.method,
+      message: `No handler found for ${req.method} ${req.path}`
+    });
+  }
   // DO NOT call next() - this is the final handler for unmatched API routes
 });
 
@@ -592,7 +1535,24 @@ app.use((req, res, next) => {
         'POST /api/auth/login',
         'GET /api/health',
         'GET /api/test',
-        'POST /api/test'
+        'POST /api/test',
+        'GET /api/user/profile',
+        'PUT /api/user/profile',
+        'PUT /api/user/email',
+        'PUT /api/user/password',
+        'GET /api/user/reservations',
+        'PUT /api/user/reservations/:id/cancel',
+        'GET /api/public/available-rooms',
+        'POST /api/public/reservations',
+        'GET /api/admin/dashboard',
+        'GET /api/admin/reservations',
+        'POST /api/admin/reservations/:id/status',
+        'POST /api/admin/reservations/:id/notes',
+        'PUT /api/admin/reservations/:id',
+        'GET /api/admin/rooms',
+        'POST /api/admin/rooms/:id/status',
+        'POST /api/admin/rooms/:id/block',
+        'GET /api/admin/calendar'
       ]
     });
     res.status(404).json({ 
@@ -636,7 +1596,19 @@ console.log('[SERVER INIT] Registered API routes:', [
   'PUT /api/user/profile',
   'PUT /api/user/email',
   'PUT /api/user/password',
-  'GET /api/user/reservations'
+  'GET /api/user/reservations',
+  'PUT /api/user/reservations/:id/cancel',
+  'GET /api/public/available-rooms',
+  'POST /api/public/reservations',
+  'GET /api/admin/dashboard',
+  'GET /api/admin/reservations',
+  'POST /api/admin/reservations/:id/status',
+  'POST /api/admin/reservations/:id/notes',
+  'PUT /api/admin/reservations/:id',
+  'GET /api/admin/rooms',
+  'POST /api/admin/rooms/:id/status',
+  'POST /api/admin/rooms/:id/block',
+  'GET /api/admin/calendar'
 ]);
 
 const angularHandler = createNodeRequestHandler(app);
