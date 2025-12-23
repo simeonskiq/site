@@ -109,6 +109,13 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
       name: this.translationService.translate('contact.name'),
       email: this.translationService.translate('contact.email'),
       phone: this.translationService.translate('contact.phone'),
+      subject: this.translationService.translate('contact.subject'),
+      subjectPlaceholder: this.translationService.translate('contact.subjectPlaceholder'),
+      generalInquiry: this.translationService.translate('contact.generalInquiry'),
+      reservationQuestion: this.translationService.translate('contact.reservationQuestion'),
+      complaint: this.translationService.translate('contact.complaint'),
+      feedback: this.translationService.translate('contact.feedback'),
+      other: this.translationService.translate('contact.other'),
       message: this.translationService.translate('contact.message'),
       submit: this.translationService.translate('contact.submit'),
       submitting: this.translationService.translate('contact.submitting'),
@@ -217,8 +224,13 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
       name: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
       phone: ['', [Validators.required]],
+      subject: ['', [Validators.required]],
       message: ['', [Validators.required, Validators.minLength(10)]]
     });
+  }
+
+  getSubjectOptions(): string[] {
+    return ['generalInquiry', 'reservationQuestion', 'complaint', 'feedback', 'other'];
   }
 
   // Getter for easy access to form fields
@@ -247,6 +259,7 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
       name: this.contactForm.value.name,
       email: this.contactForm.value.email,
       phone: this.contactForm.value.phone,
+      subject: this.contactForm.value.subject,
       message: this.contactForm.value.message
     };
 

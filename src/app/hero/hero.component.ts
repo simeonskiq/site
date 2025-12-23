@@ -98,8 +98,8 @@ export class HeroComponent implements OnInit, OnDestroy {
     this.router.navigate(['/booking']);
   }
 
-  navigateToContact() {
-    this.router.navigate(['/contact']);
+  navigateToAbout() {
+    this.router.navigate(['/about']);
   }
 
   scrollToTop(): void {

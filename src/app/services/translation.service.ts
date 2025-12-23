@@ -612,6 +612,34 @@ export class TranslationService {
       en: 'Sending...',
       bg: 'Изпращане...'
     },
+    'contact.subject': {
+      en: 'Subject',
+      bg: 'Тема'
+    },
+    'contact.subjectPlaceholder': {
+      en: 'Select a subject',
+      bg: 'Изберете тема'
+    },
+    'contact.generalInquiry': {
+      en: 'General Inquiry',
+      bg: 'Обща заявка'
+    },
+    'contact.reservationQuestion': {
+      en: 'Reservation Question',
+      bg: 'Въпрос относно резервация'
+    },
+    'contact.complaint': {
+      en: 'Complaint',
+      bg: 'Жалба'
+    },
+    'contact.feedback': {
+      en: 'Feedback',
+      bg: 'Обратна връзка'
+    },
+    'contact.other': {
+      en: 'Other',
+      bg: 'Друго'
+    },
     'contact.address': {
       en: 'Address',
       bg: 'Адрес'

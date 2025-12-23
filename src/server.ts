@@ -336,6 +336,7 @@ async function sendContactFormEmail(options: {
   name: string;
   email: string;
   phone: string;
+  subject: string;
   message: string;
 }) {
   if (!mailTransporter) {
@@ -345,25 +346,35 @@ async function sendContactFormEmail(options: {
     throw new Error('Email not configured: set HOTEL_EMAIL (or SMTP_USER).');
   }
 
-  const { name, email, phone, message } = options;
+  const { name, email, phone, subject, message } = options;
 
   const baseUrl =
     process.env['PUBLIC_SITE_URL'] ||
     (process.env['VERCEL_URL'] ? `https://${process.env['VERCEL_URL']}` : '');
   const brandLogo = baseUrl ? `${baseUrl}/images/hotel-logo.png` : '/images/hotel-logo.png';
 
-  const subject = `New Contact Form Submission from ${name}`;
+  // Map subject values to readable text
+  const subjectMap: { [key: string]: string } = {
+    'generalInquiry': 'General Inquiry',
+    'reservationQuestion': 'Reservation Question',
+    'complaint': 'Complaint',
+    'feedback': 'Feedback',
+    'other': 'Other'
+  };
+  const subjectText = subjectMap[subject] || subject;
+  const emailSubject = `New Contact Form Submission: ${subjectText} - ${name}`;
 
   // Email to hotel
   await mailTransporter.sendMail({
     from: `"Aurora Hotel Website" <${HOTEL_EMAIL}>`,
     to: HOTEL_EMAIL,
-    subject,
+    subject: emailSubject,
     text:
       `New contact form submission\n\n` +
       `Name: ${name}\n` +
       `Email: ${email}\n` +
-      `Phone: ${phone}\n\n` +
+      `Phone: ${phone}\n` +
+      `Subject: ${subjectText}\n\n` +
       `Message:\n${message}\n`
     ,
     html: renderBrandedEmail({
@@ -376,6 +387,7 @@ async function sendContactFormEmail(options: {
         `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Name</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(name)}</td></tr>` +
         `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Email</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(email)}</td></tr>` +
         `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Phone</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(phone)}</td></tr>` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Subject</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(subjectText)}</td></tr>` +
         `</table>` +
         `<div style="margin-top:14px;color:#111827;font-weight:800;">Message</div>` +
         `<div style="margin-top:6px;color:#374151;white-space:pre-wrap;">${escapeHtml(message)}</div>`
@@ -386,10 +398,11 @@ async function sendContactFormEmail(options: {
   await mailTransporter.sendMail({
     from: `"Aurora Hotel" <${HOTEL_EMAIL}>`,
     to: email,
-    subject: 'Thank you for contacting Aurora Hotel',
+    subject: `Thank you for contacting Aurora Hotel - ${subjectText}`,
     text:
       `Dear ${name},\n\n` +
-      `Thank you for contacting Aurora Hotel. We have received your message and will get back to you as soon as possible.\n\n` +
+      `Thank you for contacting Aurora Hotel. We have received your message regarding "${subjectText}" and will get back to you as soon as possible.\n\n` +
+      `Subject: ${subjectText}\n` +
       `Your message:\n${message}\n\n` +
       `Best regards,\nAurora Hotel Team`
     ,
@@ -400,9 +413,10 @@ async function sendContactFormEmail(options: {
       footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
       bodyHtml:
         `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(name)},</p>` +
-        `<p style="margin:0 0 12px 0;">Thank you for contacting Aurora Hotel. We have received your message and will get back to you as soon as possible.</p>` +
+        `<p style="margin:0 0 12px 0;">Thank you for contacting Aurora Hotel. We have received your message regarding <strong>${escapeHtml(subjectText)}</strong> and will get back to you as soon as possible.</p>` +
         `<div style="margin-top:14px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #3b82f6;">` +
-        `<div style="color:#111827;font-weight:800;margin-bottom:6px;">Your message:</div>` +
+        `<div style="color:#111827;font-weight:800;margin-bottom:6px;">Subject: ${escapeHtml(subjectText)}</div>` +
+        `<div style="color:#111827;font-weight:800;margin-top:12px;margin-bottom:6px;">Your message:</div>` +
         `<div style="color:#374151;white-space:pre-wrap;">${escapeHtml(message)}</div>` +
         `</div>` +
         `<p style="margin:12px 0 0 0;">Best regards,<br/>Aurora Hotel Team</p>`
@@ -1305,16 +1319,17 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
  */
 app.post('/api/public/contact', async (req, res): Promise<void> => {
   try {
-    const { name, email, phone, message } = req.body as {
+    const { name, email, phone, subject, message } = req.body as {
       name?: string;
       email?: string;
       phone?: string;
+      subject?: string;
       message?: string;
     };
 
     // Validate required fields
-    if (!name || !email || !phone || !message) {
-      res.status(400).json({ error: 'Missing required fields: name, email, phone, and message are required' });
+    if (!name || !email || !phone || !subject || !message) {
+      res.status(400).json({ error: 'Missing required fields: name, email, phone, subject, and message are required' });
       return;
     }
 
@@ -1337,6 +1352,7 @@ app.post('/api/public/contact', async (req, res): Promise<void> => {
         name: name.trim(),
         email: email.trim(),
         phone: phone.trim(),
+        subject: subject.trim(),
         message: message.trim()
       });
 
