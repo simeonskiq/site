@@ -18,32 +18,6 @@ export class AboutComponent implements OnInit, OnDestroy {
   showScrollToTop: boolean = false;
   private isBrowser: boolean;
 
-  // Bulgarian translations for the about component
-  private translationKeys = {
-    en: {
-      title: 'About Us',
-      subtitle: 'Learn more about our company and mission',
-      ourStory: 'Our Story',
-      storyContent: 'Founded in 2010, we have been providing exceptional services to our clients for over a decade...',
-      ourMission: 'Our Mission',
-      missionContent: 'We are committed to delivering high-quality services that exceed our clients\' expectations...',
-      ourTeam: 'Our Team',
-      teamContent: 'Our team consists of highly skilled professionals dedicated to providing the best service...',
-      // Add all other English texts from your component here
-    },
-    bg: {
-      title: 'За нас',
-      subtitle: 'Научете повече за нашата компания и мисия',
-      ourStory: 'Нашата история',
-      storyContent: 'Основана през 2010 г., ние предоставяме изключителни услуги на нашите клиенти вече повече от десетилетие...',
-      ourMission: 'Нашата мисия',
-      missionContent: 'Ние сме ангажирани да предоставяме висококачествени услуги, които надминават очакванията на нашите клиенти...',
-      ourTeam: 'Нашият екип',
-      teamContent: 'Нашият екип се състои от висококвалифицирани професионалисти, посветени на предоставянето на най-добрата услуга...',
-      // Add all Bulgarian translations here
-    }
-  };
-
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private translationService: TranslationService,
@@ -70,22 +44,64 @@ export class AboutComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Register translations with the translation service
-    this.translationService.addTranslations('about', this.translationKeys);
-    
     // Subscribe to language changes
-    this.langSubscription = this.languageService.currentLanguage.subscribe((lang: 'en' | 'bg') => {
+    this.langSubscription = this.languageService.currentLanguage$.subscribe((lang: 'en' | 'bg') => {
       this.currentLanguage = lang;
-      this.translations = this.translationService.getTranslations('about', lang);
+      this.loadTranslations();
     });
     
     // Initialize translations with current language
-    this.translations = this.translationService.getTranslations('about', this.languageService.getCurrentLanguage());
+    this.loadTranslations();
 
     // Only execute window-related code in browser environment
     if (isPlatformBrowser(this.platformId)) {
       window.scrollTo(0, 0); // Scroll to top when component loads
     }
+  }
+
+  private loadTranslations(): void {
+    this.translations = {
+      ourStory: this.translationService.translate('about.ourStory'),
+      storyContent: this.translationService.translate('about.storyContent'),
+      storyContent2: this.translationService.translate('about.storyContent2'),
+      storyContent3: this.translationService.translate('about.storyContent3'),
+      luxuriousAccommodations: this.translationService.translate('about.luxuriousAccommodations'),
+      deluxeSuites: this.translationService.translate('about.deluxeSuites'),
+      deluxeSuitesDesc: this.translationService.translate('about.deluxeSuitesDesc'),
+      oceanViewRooms: this.translationService.translate('about.oceanViewRooms'),
+      oceanViewRoomsDesc: this.translationService.translate('about.oceanViewRoomsDesc'),
+      privateVillas: this.translationService.translate('about.privateVillas'),
+      privateVillasDesc: this.translationService.translate('about.privateVillasDesc'),
+      resortAmenities: this.translationService.translate('about.resortAmenities'),
+      infinityPool: this.translationService.translate('about.infinityPool'),
+      infinityPoolDesc: this.translationService.translate('about.infinityPoolDesc'),
+      spaWellness: this.translationService.translate('about.spaWellness'),
+      spaWellnessDesc: this.translationService.translate('about.spaWellnessDesc'),
+      fineDining: this.translationService.translate('about.fineDining'),
+      fineDiningDesc: this.translationService.translate('about.fineDiningDesc'),
+      waterActivities: this.translationService.translate('about.waterActivities'),
+      waterActivitiesDesc: this.translationService.translate('about.waterActivitiesDesc'),
+      sustainabilityCommitment: this.translationService.translate('about.sustainabilityCommitment'),
+      sustainabilityContent1: this.translationService.translate('about.sustainabilityContent1'),
+      sustainabilityContent2: this.translationService.translate('about.sustainabilityContent2'),
+      sustainabilityContent3: this.translationService.translate('about.sustainabilityContent3'),
+      meetLeadershipTeam: this.translationService.translate('about.meetLeadershipTeam'),
+      ceo: this.translationService.translate('about.ceo'),
+      ceoDesc: this.translationService.translate('about.ceoDesc'),
+      directorOperations: this.translationService.translate('about.directorOperations'),
+      directorOperationsDesc: this.translationService.translate('about.directorOperationsDesc'),
+      executiveChef: this.translationService.translate('about.executiveChef'),
+      executiveChefDesc: this.translationService.translate('about.executiveChefDesc'),
+      resortExteriorView: this.translationService.translate('about.resortExteriorView'),
+      deluxeSuite: this.translationService.translate('about.deluxeSuite'),
+      oceanViewRoom: this.translationService.translate('about.oceanViewRoom'),
+      privateVilla: this.translationService.translate('about.privateVilla'),
+      resortPool: this.translationService.translate('about.resortPool'),
+      beachConservation: this.translationService.translate('about.beachConservation'),
+      ceoPortrait: this.translationService.translate('about.ceoPortrait'),
+      operationsDirectorPortrait: this.translationService.translate('about.operationsDirectorPortrait'),
+      chefPortrait: this.translationService.translate('about.chefPortrait')
+    };
   }
 
   ngOnDestroy(): void {

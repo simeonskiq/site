@@ -4,114 +4,83 @@
             <h1>{{ translations.title || 'Welcome to Aurora' }}</h1>
             <p>{{ translations.subtitle || 'Experience luxury and comfort in the heart of the city' }}</p>
             <div class="button-group">
-                <button (click)="navigateToBooking()" class="cta-button">{{ translations.bookNow || 'Book Now' }}</button>
-                <button (click)="navigateToContact()" class="cta-button">{{ translations.learnMore || 'Learn More' }}</button>
+                <button (click)="navigateToBooking()" class="cta-button primary">{{ translations.bookNow || 'Book Now' }}</button>
+                <button (click)="navigateToContact()" class="cta-button secondary">{{ translations.learnMore || 'Learn More' }}</button>
             </div>
         </div>
     </div>
     <div class="scroll-indicator">
-        <p>Scroll to explore</p>
+        <p>{{ translations.scrollToExplore || 'Scroll to explore' }}</p>
         <div class="arrow-down"></div>
     </div>
 </div>
 
-<!-- Typewriter Effect Section - Modern Redesign -->
-<div class="experience-section">
-  <div class="experience-wrapper">
-    <div class="experience-header">
-      <div class="header-line"></div>
-      <h2 class="experience-title">
-        <span class="title-word">Experience</span>
-        <span class="title-word accent">Our</span>
-      </h2>
-      <div class="header-line"></div>
-    </div>
-    <div class="typewriter-modern">
-      <div class="typewriter-badge">
-        <span class="badge-text">Discover</span>
-      </div>
-      <div class="typewriter-content">
-        <span id="typewriter-text" class="typewriter-text"></span>
-        <span class="cursor-modern">|</span>
-      </div>
-      <div class="typewriter-subtitle">
-        <p>Where luxury meets exceptional service</p>
-      </div>
-    </div>
-    <div class="experience-particles">
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-      <div class="particle"></div>
-    </div>
-  </div>
-</div>
-
 <!-- Features Section -->
 <div class="features-section">
-  <div class="feature-card">
-    <div class="feature-icon">
-      <i class="fas fa-utensils"></i>
+  <div class="features-container">
+    <div class="feature-card">
+      <div class="feature-icon">
+        <i class="fas fa-utensils"></i>
+      </div>
+      <h3>{{ translations.gourmetDining || 'Gourmet Dining' }}</h3>
+      <p>{{ translations.gourmetDiningDesc || 'Indulge in exquisite cuisine prepared by our award-winning chefs using the finest local ingredients.' }}</p>
     </div>
-    <h3>Gourmet Dining</h3>
-    <p>Indulge in exquisite cuisine prepared by our award-winning chefs using the finest local ingredients.</p>
-  </div>
-  
-  <div class="feature-card">
-    <div class="feature-icon">
-      <i class="fas fa-spa"></i>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <i class="fas fa-spa"></i>
+      </div>
+      <h3>{{ translations.luxurySpa || 'Luxury Spa' }}</h3>
+      <p>{{ translations.luxurySpaDesc || 'Rejuvenate your body and mind with our premium spa treatments and wellness facilities.' }}</p>
     </div>
-    <h3>Luxury Spa</h3>
-    <p>Rejuvenate your body and mind with our premium spa treatments and wellness facilities.</p>
-  </div>
-  
-  <div class="feature-card">
-    <div class="feature-icon">
-      <i class="fas fa-concierge-bell"></i>
+    
+    <div class="feature-card">
+      <div class="feature-icon">
+        <i class="fas fa-concierge-bell"></i>
+      </div>
+      <h3>{{ translations.concierge || '24/7 Concierge' }}</h3>
+      <p>{{ translations.conciergeDesc || 'Our dedicated staff is always available to ensure your stay exceeds all expectations.' }}</p>
     </div>
-    <h3>24/7 Concierge</h3>
-    <p>Our dedicated staff is always available to ensure your stay exceeds all expectations.</p>
   </div>
 </div>
 
 <!-- Room Showcase Section -->
 <div class="room-showcase">
-  <h2>Luxurious Accommodations</h2>
+  <h2>{{ translations.luxuriousAccommodations || 'Luxurious Accommodations' }}</h2>
   <div class="room-cards">
     <div class="room-card">
       <div class="room-image deluxe-room"></div>
       <div class="room-details">
-        <h3>Deluxe Apartment</h3>
-        <p>Spacious comfort with stunning views and modern amenities</p>
+        <h3>{{ translations.deluxeApartment || 'Deluxe Apartment' }}</h3>
+        <p>{{ translations.deluxeApartmentDesc || 'Spacious comfort with stunning views and modern amenities' }}</p>
         <ul>
-          <li><i class="fas fa-users"></i> Up to 4 guests</li>
-          <li><i class="fas fa-bed"></i> King-size bed + sofa bed</li>
-          <li><i class="fas fa-bath"></i> Luxury bathroom</li>
-          <li><i class="fas fa-utensils"></i> Fully equipped kitchen</li>
+          <li><i class="fas fa-users"></i> {{ translations.upToGuests || 'Up to' }} 4 {{ translations.guests || 'guests' }}</li>
+          <li><i class="fas fa-bed"></i> {{ translations.kingSizeBed || 'King-size bed' }} + {{ translations.sofaBed || 'sofa bed' }}</li>
+          <li><i class="fas fa-bath"></i> {{ translations.luxuryBathroom || 'Luxury bathroom' }}</li>
+          <li><i class="fas fa-utensils"></i> {{ translations.fullyEquippedKitchen || 'Fully equipped kitchen' }}</li>
         </ul>
         <div class="room-price">
-          <span class="price">$150</span> / night
+          <span class="price">$150</span> {{ translations.night || '/ night' }}
         </div>
-        <button (click)="navigateToBooking()" class="room-button">Book Now</button>
+        <button (click)="navigateToBooking()" class="room-button">{{ translations.bookNow || 'Book Now' }}</button>
       </div>
     </div>
     
     <div class="room-card">
       <div class="room-image executive-room"></div>
       <div class="room-details">
-        <h3>Executive Suite</h3>
-        <p>Premium accommodation with exclusive amenities</p>
+        <h3>{{ translations.executiveSuite || 'Executive Suite' }}</h3>
+        <p>{{ translations.executiveSuiteDesc || 'Premium accommodation with exclusive amenities' }}</p>
         <ul>
-          <li><i class="fas fa-users"></i> Up to 2 guests</li>
-          <li><i class="fas fa-bed"></i> Queen-size bed</li>
-          <li><i class="fas fa-coffee"></i> Nespresso machine</li>
-          <li><i class="fas fa-concierge-bell"></i> 24/7 room service</li>
+          <li><i class="fas fa-users"></i> {{ translations.upToGuests || 'Up to' }} 2 {{ translations.guests || 'guests' }}</li>
+          <li><i class="fas fa-bed"></i> {{ translations.queenSizeBed || 'Queen-size bed' }}</li>
+          <li><i class="fas fa-coffee"></i> {{ translations.nespressoMachine || 'Nespresso machine' }}</li>
+          <li><i class="fas fa-concierge-bell"></i> {{ translations.roomService || '24/7 room service' }}</li>
         </ul>
         <div class="room-price">
-          <span class="price">$120</span> / night
+          <span class="price">$120</span> {{ translations.night || '/ night' }}
         </div>
-        <button (click)="navigateToBooking()" class="room-button">Book Now</button>
+        <button (click)="navigateToBooking()" class="room-button">{{ translations.bookNow || 'Book Now' }}</button>
       </div>
     </div>
   </div>
@@ -119,8 +88,8 @@
 
 <!-- Call to Action Section -->
 <div class="cta-section">
-  <h2>Experience Luxury at Aurora</h2>
-  <button (click)="navigateToBooking()" class="cta-button">{{ translations.bookNow || 'Book Now' }}</button>
+  <h2>{{ translations.experienceLuxury || 'Experience Luxury at Aurora' }}</h2>
+  <button (click)="navigateToBooking()" class="cta-button primary">{{ translations.bookNow || 'Book Now' }}</button>
 </div>
 
 <!-- Scroll to Top Button -->

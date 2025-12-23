@@ -432,6 +432,34 @@ export class TranslationService {
       en: 'Experience Luxury at Aurora',
       bg: 'Изживейте луксоз в Аврора'
     },
+    'hero.kingSizeBed': {
+      en: 'King-size bed',
+      bg: 'Голямо двойно легло'
+    },
+    'hero.queenSizeBed': {
+      en: 'Queen-size bed',
+      bg: 'Двойно легло'
+    },
+    'hero.sofaBed': {
+      en: 'sofa bed',
+      bg: 'разтегателен диван'
+    },
+    'hero.luxuryBathroom': {
+      en: 'Luxury bathroom',
+      bg: 'Луксозна баня'
+    },
+    'hero.fullyEquippedKitchen': {
+      en: 'Fully equipped kitchen',
+      bg: 'Напълно оборудвана кухня'
+    },
+    'hero.nespressoMachine': {
+      en: 'Nespresso machine',
+      bg: 'Машина Nespresso'
+    },
+    'hero.roomService': {
+      en: '24/7 room service',
+      bg: 'Обслужване в стаята 24/7'
+    },
     
     // Booking Component
     'booking.title': {
@@ -580,6 +608,10 @@ export class TranslationService {
       en: 'Submit',
       bg: 'Изпрати'
     },
+    'contact.submitting': {
+      en: 'Sending...',
+      bg: 'Изпращане...'
+    },
     'contact.address': {
       en: 'Address',
       bg: 'Адрес'
@@ -645,6 +677,138 @@ export class TranslationService {
     'about.resortAmenities': {
       en: 'Resort Amenities',
       bg: 'Удобства на курорта'
+    },
+    'about.storyContent2': {
+      en: 'What started as a boutique beachfront property has evolved into a world-class destination, consistently recognized for our commitment to sustainability, luxury accommodations, and personalized experiences that create lasting memories.',
+      bg: 'Това, което започна като бутиков имот на брега, се превърна в световна дестинация, последователно призната за нашата ангажираност към устойчивост, луксозни настанявания и персонализирани преживявания, които създават незабравими спомени.'
+    },
+    'about.storyContent3': {
+      en: 'Our dedicated team of hospitality professionals works tirelessly to ensure every aspect of your stay exceeds expectations, from the moment you arrive until your reluctant departure.',
+      bg: 'Нашият предан екип от професионалисти в сферата на хотелиерството работи неуморно, за да гарантира, че всеки аспект от престоя ви надхвърля очакванията, от момента на пристигането ви до неохотното ви напускане.'
+    },
+    'about.deluxeSuitesDesc': {
+      en: 'Spacious rooms with premium amenities and breathtaking views',
+      bg: 'Просторни стаи с премиум удобства и зашеметяващи гледки'
+    },
+    'about.oceanViewRoomsDesc': {
+      en: 'Wake up to stunning panoramic views of the crystal-clear waters',
+      bg: 'Събудете се с зашеметяващи панорамни гледки към кристално чистите води'
+    },
+    'about.privateVillasDesc': {
+      en: 'Ultimate privacy with dedicated concierge service and exclusive amenities',
+      bg: 'Пълна поверителност с персонализирано обслужване от консиерж и ексклузивни удобства'
+    },
+    'about.infinityPool': {
+      en: 'Infinity Pool',
+      bg: 'Безкраен басейн'
+    },
+    'about.infinityPoolDesc': {
+      en: 'Our signature infinity pool overlooks the ocean, creating a seamless blend with the horizon.',
+      bg: 'Нашият фирмен безкраен басейн се открива към океана, създавайки безпроблемно сливане с хоризонта.'
+    },
+    'about.spaWellness': {
+      en: 'Spa & Wellness',
+      bg: 'Спа и Здраве'
+    },
+    'about.spaWellnessDesc': {
+      en: 'Rejuvenate your body and mind with our comprehensive spa treatments and wellness programs.',
+      bg: 'Обновете тялото и ума си с нашите всеобхватни спа процедури и здравни програми.'
+    },
+    'about.fineDining': {
+      en: 'Fine Dining',
+      bg: 'Изискана кухня'
+    },
+    'about.fineDiningDesc': {
+      en: 'Experience culinary excellence at our three award-winning restaurants featuring local and international cuisine.',
+      bg: 'Изживейте кулинарно майсторство в нашите три наградени ресторанта, предлагащи местна и международна кухня.'
+    },
+    'about.waterActivities': {
+      en: 'Water Activities',
+      bg: 'Водни дейности'
+    },
+    'about.waterActivitiesDesc': {
+      en: 'From snorkeling to sailing, our water sports center offers activities for all skill levels.',
+      bg: 'От гмуркане с шнорхел до плаване, нашият център за водни спортове предлага дейности за всички нива на умения.'
+    },
+    'about.sustainabilityCommitment': {
+      en: 'Our Commitment to Sustainability',
+      bg: 'Нашата ангажираност към устойчивост'
+    },
+    'about.sustainabilityContent1': {
+      en: 'At Serenity Shores, we believe in responsible luxury. Our resort operates on 80% renewable energy, implements comprehensive recycling programs, and sources over 60% of our ingredients from local farmers and fishermen.',
+      bg: 'В Serenity Shores вярваме в отговорен луксоз. Нашият курорт работи с 80% възобновяема енергия, прилага всеобхватни програми за рециклиране и доставя над 60% от нашите продукти от местни фермери и рибари.'
+    },
+    'about.sustainabilityContent2': {
+      en: 'We actively participate in coral reef restoration projects and beach clean-up initiatives, ensuring that the natural beauty surrounding our resort remains pristine for generations to come.',
+      bg: 'Активно участваме в проекти за възстановяване на коралови рифове и инициативи за почистване на плажовете, гарантирайки, че естествената красота около нашия курорт остава девствена за бъдещите поколения.'
+    },
+    'about.sustainabilityContent3': {
+      en: 'By choosing Serenity Shores, you\'re not just experiencing luxury—you\'re supporting sustainable tourism practices that protect and preserve our precious environment.',
+      bg: 'Като изберете Serenity Shores, вие не просто изживявате луксоз—вие подкрепяте устойчиви туристически практики, които защитават и запазват нашата ценна околна среда.'
+    },
+    'about.meetLeadershipTeam': {
+      en: 'Meet Our Leadership Team',
+      bg: 'Запознайте се с нашия ръководен екип'
+    },
+    'about.ceo': {
+      en: 'Chief Executive Officer',
+      bg: 'Главен изпълнителен директор'
+    },
+    'about.ceoDesc': {
+      en: 'With over 20 years in luxury hospitality, Alexandra brings vision and innovation to Serenity Shores.',
+      bg: 'С над 20 години опит в луксозното хотелиерство, Александра внася визия и иновации в Serenity Shores.'
+    },
+    'about.directorOperations': {
+      en: 'Director of Operations',
+      bg: 'Директор по операциите'
+    },
+    'about.directorOperationsDesc': {
+      en: 'Marcus ensures flawless execution of every aspect of our resort experience.',
+      bg: 'Маркъс гарантира безупречното изпълнение на всеки аспект от преживяването в нашия курорт.'
+    },
+    'about.executiveChef': {
+      en: 'Executive Chef',
+      bg: 'Главен готвач'
+    },
+    'about.executiveChefDesc': {
+      en: 'Award-winning culinary artist creating unforgettable dining experiences.',
+      bg: 'Награден кулинарен артист, създаващ незабравими гастрономически преживявания.'
+    },
+    'about.resortExteriorView': {
+      en: 'Resort exterior view',
+      bg: 'Външен изглед на курорта'
+    },
+    'about.deluxeSuite': {
+      en: 'Deluxe suite',
+      bg: 'Делукс апартамент'
+    },
+    'about.oceanViewRoom': {
+      en: 'Ocean view room',
+      bg: 'Стая с изглед към океана'
+    },
+    'about.privateVilla': {
+      en: 'Private villa',
+      bg: 'Частна вила'
+    },
+    'about.resortPool': {
+      en: 'Resort pool',
+      bg: 'Басейн на курорта'
+    },
+    'about.beachConservation': {
+      en: 'Beach conservation',
+      bg: 'Запазване на плажа'
+    },
+    'about.ceoPortrait': {
+      en: 'CEO portrait',
+      bg: 'Портрет на главен директор'
+    },
+    'about.operationsDirectorPortrait': {
+      en: 'Operations Director portrait',
+      bg: 'Портрет на директор по операциите'
+    },
+    'about.chefPortrait': {
+      en: 'Chef portrait',
+      bg: 'Портрет на готвач'
     },
     
     // Login Component

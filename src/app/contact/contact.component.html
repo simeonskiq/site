@@ -39,9 +39,10 @@
           <textarea id="message" formControlName="message" class="form-control" rows="5"></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary" [disabled]="contactForm.invalid">
+        <button type="submit" class="btn btn-primary" [disabled]="contactForm.invalid || isSubmitting">
           <mat-icon>send</mat-icon>
-          {{ translations.submit || 'Submit' }}
+          <span *ngIf="!isSubmitting">{{ translations.submit || 'Submit' }}</span>
+          <span *ngIf="isSubmitting">{{ translations.submitting || 'Sending...' }}</span>
         </button>
       </form>
 

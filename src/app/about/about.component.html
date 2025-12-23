@@ -6,33 +6,33 @@
       <div class="story-content">
         <div class="story-text">
           <p>{{ translations.storyContent || 'Founded in 2010, we have been providing exceptional services to our clients for over a decade...' }}</p>
-          <p>What started as a boutique beachfront property has evolved into a world-class destination, consistently recognized for our commitment to sustainability, luxury accommodations, and personalized experiences that create lasting memories.</p>
-          <p>Our dedicated team of hospitality professionals works tirelessly to ensure every aspect of your stay exceeds expectations, from the moment you arrive until your reluctant departure.</p>
+          <p>{{ translations.storyContent2 || 'What started as a boutique beachfront property has evolved into a world-class destination, consistently recognized for our commitment to sustainability, luxury accommodations, and personalized experiences that create lasting memories.' }}</p>
+          <p>{{ translations.storyContent3 || 'Our dedicated team of hospitality professionals works tirelessly to ensure every aspect of your stay exceeds expectations, from the moment you arrive until your reluctant departure.' }}</p>
         </div>
         <div class="story-image">
-          <img src="../../images/hotel/hotel-1.png" alt="Resort exterior view" class="rounded-image">
+          <img src="../../images/hotel/hotel-1.png" [alt]="translations.resortExteriorView || 'Resort exterior view'" class="rounded-image">
         </div>
       </div>
     </div>
 
   <section class="accommodations">
     <div class="container">
-      <h2>Luxurious Accommodations</h2>
+      <h2>{{ translations.luxuriousAccommodations || 'Luxurious Accommodations' }}</h2>
       <div class="image-gallery">
         <div class="gallery-item">
-          <img src="../../images/apart2/IMG_3735.JPEG" alt="Deluxe suite" class="gallery-image">
-          <h3>Deluxe Suites</h3>
-          <p>Spacious rooms with premium amenities and breathtaking views</p>
+          <img src="../../images/apart2/IMG_3735.JPEG" [alt]="translations.deluxeSuite || 'Deluxe suite'" class="gallery-image">
+          <h3>{{ translations.deluxeSuites || 'Deluxe Suites' }}</h3>
+          <p>{{ translations.deluxeSuitesDesc || 'Spacious rooms with premium amenities and breathtaking views' }}</p>
         </div>
         <div class="gallery-item">
-          <img src="../../images/apart2/sea-side-view.png" alt="Ocean view room" class="gallery-image">
-          <h3>Ocean View Rooms</h3>
-          <p>Wake up to stunning panoramic views of the crystal-clear waters</p>
+          <img src="../../images/apart2/sea-side-view.png" [alt]="translations.oceanViewRoom || 'Ocean view room'" class="gallery-image">
+          <h3>{{ translations.oceanViewRooms || 'Ocean View Rooms' }}</h3>
+          <p>{{ translations.oceanViewRoomsDesc || 'Wake up to stunning panoramic views of the crystal-clear waters' }}</p>
         </div>
         <div class="gallery-item">
-          <img src="../../images/hotel/hotel-2.png" alt="Private villa" class="gallery-image">
-          <h3>Private Villas</h3>
-          <p>Ultimate privacy with dedicated concierge service and exclusive amenities</p>
+          <img src="../../images/hotel/hotel-2.png" [alt]="translations.privateVilla || 'Private villa'" class="gallery-image">
+          <h3>{{ translations.privateVillas || 'Private Villas' }}</h3>
+          <p>{{ translations.privateVillasDesc || 'Ultimate privacy with dedicated concierge service and exclusive amenities' }}</p>
         </div>
       </div>
     </div>
@@ -40,27 +40,27 @@
 
   <section class="amenities">
     <div class="container">
-      <h2>Resort Amenities</h2>
+      <h2>{{ translations.resortAmenities || 'Resort Amenities' }}</h2>
       <div class="amenities-content">
         <div class="amenities-image">
-          <img src="../../images/hotel/hotel-3.png" alt="Resort pool" class="rounded-image">
+          <img src="../../images/hotel/hotel-3.png" [alt]="translations.resortPool || 'Resort pool'" class="rounded-image">
         </div>
         <div class="amenities-list">
           <div class="amenity-item">
-            <h3>Infinity Pool</h3>
-            <p>Our signature infinity pool overlooks the ocean, creating a seamless blend with the horizon.</p>
+            <h3>{{ translations.infinityPool || 'Infinity Pool' }}</h3>
+            <p>{{ translations.infinityPoolDesc || 'Our signature infinity pool overlooks the ocean, creating a seamless blend with the horizon.' }}</p>
           </div>
           <div class="amenity-item">
-            <h3>Spa & Wellness</h3>
-            <p>Rejuvenate your body and mind with our comprehensive spa treatments and wellness programs.</p>
+            <h3>{{ translations.spaWellness || 'Spa & Wellness' }}</h3>
+            <p>{{ translations.spaWellnessDesc || 'Rejuvenate your body and mind with our comprehensive spa treatments and wellness programs.' }}</p>
           </div>
           <div class="amenity-item">
-            <h3>Fine Dining</h3>
-            <p>Experience culinary excellence at our three award-winning restaurants featuring local and international cuisine.</p>
+            <h3>{{ translations.fineDining || 'Fine Dining' }}</h3>
+            <p>{{ translations.fineDiningDesc || 'Experience culinary excellence at our three award-winning restaurants featuring local and international cuisine.' }}</p>
           </div>
           <div class="amenity-item">
-            <h3>Water Activities</h3>
-            <p>From snorkeling to sailing, our water sports center offers activities for all skill levels.</p>
+            <h3>{{ translations.waterActivities || 'Water Activities' }}</h3>
+            <p>{{ translations.waterActivitiesDesc || 'From snorkeling to sailing, our water sports center offers activities for all skill levels.' }}</p>
           </div>
         </div>
       </div>
@@ -69,15 +69,15 @@
 
   <section class="sustainability">
     <div class="container">
-      <h2>Our Commitment to Sustainability</h2>
+      <h2>{{ translations.sustainabilityCommitment || 'Our Commitment to Sustainability' }}</h2>
       <div class="sustainability-content">
         <div class="sustainability-text">
-          <p>At Serenity Shores, we believe in responsible luxury. Our resort operates on 80% renewable energy, implements comprehensive recycling programs, and sources over 60% of our ingredients from local farmers and fishermen.</p>
-          <p>We actively participate in coral reef restoration projects and beach clean-up initiatives, ensuring that the natural beauty surrounding our resort remains pristine for generations to come.</p>
-          <p>By choosing Serenity Shores, you're not just experiencing luxury—you're supporting sustainable tourism practices that protect and preserve our precious environment.</p>
+          <p>{{ translations.sustainabilityContent1 || 'At Serenity Shores, we believe in responsible luxury. Our resort operates on 80% renewable energy, implements comprehensive recycling programs, and sources over 60% of our ingredients from local farmers and fishermen.' }}</p>
+          <p>{{ translations.sustainabilityContent2 || 'We actively participate in coral reef restoration projects and beach clean-up initiatives, ensuring that the natural beauty surrounding our resort remains pristine for generations to come.' }}</p>
+          <p>{{ translations.sustainabilityContent3 || 'By choosing Serenity Shores, you\'re not just experiencing luxury—you\'re supporting sustainable tourism practices that protect and preserve our precious environment.' }}</p>
         </div>
         <div class="sustainability-image">
-          <img src="../../images/hotel/hotel-5.png" alt="Beach conservation" class="rounded-image">
+          <img src="../../images/hotel/hotel-5.png" [alt]="translations.beachConservation || 'Beach conservation'" class="rounded-image">
         </div>
       </div>
     </div>
@@ -85,25 +85,25 @@
 
   <section class="team">
     <div class="container">
-      <h2>Meet Our Leadership Team</h2>
+      <h2>{{ translations.meetLeadershipTeam || 'Meet Our Leadership Team' }}</h2>
       <div class="team-grid">
         <div class="team-member">
-          <img src="https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" alt="CEO portrait" class="team-image">
+          <img src="https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" [alt]="translations.ceoPortrait || 'CEO portrait'" class="team-image">
           <h3>Alexandra Chen</h3>
-          <p class="position">Chief Executive Officer</p>
-          <p>With over 20 years in luxury hospitality, Alexandra brings vision and innovation to Serenity Shores.</p>
+          <p class="position">{{ translations.ceo || 'Chief Executive Officer' }}</p>
+          <p>{{ translations.ceoDesc || 'With over 20 years in luxury hospitality, Alexandra brings vision and innovation to Serenity Shores.' }}</p>
         </div>
         <div class="team-member">
-          <img src="https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" alt="Operations Director portrait" class="team-image">
+          <img src="https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" [alt]="translations.operationsDirectorPortrait || 'Operations Director portrait'" class="team-image">
           <h3>Marcus Johnson</h3>
-          <p class="position">Director of Operations</p>
-          <p>Marcus ensures flawless execution of every aspect of our resort experience.</p>
+          <p class="position">{{ translations.directorOperations || 'Director of Operations' }}</p>
+          <p>{{ translations.directorOperationsDesc || 'Marcus ensures flawless execution of every aspect of our resort experience.' }}</p>
         </div>
         <div class="team-member">
-          <img src="https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" alt="Chef portrait" class="team-image">
+          <img src="https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg" [alt]="translations.chefPortrait || 'Chef portrait'" class="team-image">
           <h3>Isabella Moretti</h3>
-          <p class="position">Executive Chef</p>
-          <p>Award-winning culinary artist creating unforgettable dining experiences.</p>
+          <p class="position">{{ translations.executiveChef || 'Executive Chef' }}</p>
+          <p>{{ translations.executiveChefDesc || 'Award-winning culinary artist creating unforgettable dining experiences.' }}</p>
         </div>
       </div>
     </div>

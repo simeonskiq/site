@@ -47,54 +47,10 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
   errorMessage = false;
   showScrollToTop: boolean = false;
 
-  // EmailJS configuration
-  private emailJsServiceId = 'YOUR_SERVICE_ID'; // Replace with your EmailJS service ID
-  private emailJsTemplateId = 'YOUR_TEMPLATE_ID'; // Replace with your EmailJS template ID
-  private emailJsUserId = 'YOUR_USER_ID'; // Replace with your EmailJS user ID (public key)
 
   translations: any = {};
   private langSubscription: Subscription = new Subscription();
   currentLanguage: string = 'en';
-
-  // Bulgarian translations for the contact component
-  private translationKeys = {
-    en: {
-      title: 'Contact Us',
-      subtitle: 'Get in touch with our team',
-      name: 'Name',
-      email: 'Email',
-      phone: 'Phone',
-      message: 'Message',
-      submit: 'Submit',
-      address: 'Address',
-      addressContent: '123 Main Street, City, Country',
-      phoneLabel: 'Phone',
-      phoneContent: '+1 234 567 890',
-      emailLabel: 'Email',
-      emailContent: 'info@example.com',
-      successMessage: 'Your message has been sent successfully!',
-      errorMessage: 'There was an error sending your message. Please try again.',
-      // Add all other English texts from your component here
-    },
-    bg: {
-      title: 'Свържете се с нас',
-      subtitle: 'Свържете се с нашия екип',
-      name: 'Име',
-      email: 'Имейл',
-      phone: 'Телефон',
-      message: 'Съобщение',
-      submit: 'Изпрати',
-      address: 'Адрес',
-      addressContent: 'ул. Главна 123, Град, Държава',
-      phoneLabel: 'Телефон',
-      phoneContent: '+1 234 567 890',
-      emailLabel: 'Имейл',
-      emailContent: 'info@example.com',
-      successMessage: 'Вашето съобщение беше изпратено успешно!',
-      errorMessage: 'Възникна грешка при изпращането на вашето съобщение. Моля, опитайте отново.',
-      // Add all Bulgarian translations here
-    }
-  };
 
   constructor(
     private formBuilder: FormBuilder,
@@ -114,7 +70,6 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
     this.initForm();
     
     if (this.isBrowser) {
-      this.loadEmailJsScript();
       this.loadLeaflet();
       
       if (navigator.geolocation) {
@@ -132,22 +87,37 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    // Register translations with the translation service
-    this.translationService.addTranslations('contact', this.translationKeys);
-    
     // Subscribe to language changes
-    this.langSubscription = this.languageService.currentLanguage.subscribe((lang: 'en' | 'bg') => {
+    this.langSubscription = this.languageService.currentLanguage$.subscribe((lang: 'en' | 'bg') => {
       this.currentLanguage = lang;
-      this.translations = this.translationService.getTranslations('contact', lang);
+      this.loadTranslations();
     });
     
     // Initialize translations with current language
-    this.translations = this.translationService.getTranslations('contact', this.languageService.getCurrentLanguage());
+    this.loadTranslations();
 
     // Scroll to top when component loads
     if (this.isBrowser) {
       window.scrollTo(0, 0);
     }
+  }
+
+  private loadTranslations(): void {
+    this.translations = {
+      title: this.translationService.translate('contact.title'),
+      subtitle: this.translationService.translate('contact.subtitle'),
+      name: this.translationService.translate('contact.name'),
+      email: this.translationService.translate('contact.email'),
+      phone: this.translationService.translate('contact.phone'),
+      message: this.translationService.translate('contact.message'),
+      submit: this.translationService.translate('contact.submit'),
+      submitting: this.translationService.translate('contact.submitting'),
+      address: this.translationService.translate('contact.address'),
+      phoneLabel: this.translationService.translate('contact.phoneLabel'),
+      emailLabel: this.translationService.translate('contact.emailLabel'),
+      successMessage: this.translationService.translate('contact.successMessage'),
+      errorMessage: this.translationService.translate('contact.errorMessage')
+    };
   }
 
   @HostListener('window:scroll', [])
@@ -200,20 +170,6 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
     document.head.appendChild(link);
   }
 
-  // Load EmailJS SDK
-  private loadEmailJsScript() {
-    if (!this.isBrowser) return;
-    
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
-    script.async = true;
-    script.onload = () => {
-      // Initialize EmailJS with your user ID
-      (window as any).emailjs.init(this.emailJsUserId);
-    };
-    document.head.appendChild(script);
-  }
 
   private initMap() {
     if (!this.isBrowser || !document.getElementById('map')) return;
@@ -281,43 +237,35 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.isSubmitting = true;
 
-    // Send email using EmailJS
-    if (this.isBrowser) {
-      this.sendViaEmailJS();
-    } else {
-      this.handleSubmitError();
-    }
+    // Send contact form via API
+    this.sendContactForm();
   }
 
-  // Send via EmailJS (https://www.emailjs.com)
-  private sendViaEmailJS(): void {
-    if (!this.isBrowser || !(window as any).emailjs) {
-      console.error('EmailJS not loaded');
-      this.handleSubmitError();
-      return;
-    }
-
-    const templateParams = {
+  // Send contact form via API
+  private sendContactForm(): void {
+    const formData = {
       name: this.contactForm.value.name,
       email: this.contactForm.value.email,
-      subject: this.contactForm.value.subject,
-      message: this.contactForm.value.message,
-      to_email: this.contactInfo.email // The email address where you want to receive messages
+      phone: this.contactForm.value.phone,
+      message: this.contactForm.value.message
     };
 
-    (window as any).emailjs.send(
-      this.emailJsServiceId,
-      this.emailJsTemplateId,
-      templateParams
-    )
-    .then((response: any) => {
-      console.log('Email sent successfully', response);
-      this.handleSubmitSuccess();
-    })
-    .catch((error: any) => {
-      console.error('Error sending email', error);
-      this.handleSubmitError();
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
     });
+
+    this.http.post('/api/public/contact', formData, { headers })
+      .subscribe({
+        next: (response: any) => {
+          console.log('Contact form submitted successfully', response);
+          this.handleSubmitSuccess();
+        },
+        error: (error: any) => {
+          console.error('Error submitting contact form', error);
+          const errorMessage = error.error?.error || error.error?.message || 'Failed to send message';
+          this.handleSubmitError(errorMessage);
+        }
+      });
   }
 
   private handleSubmitSuccess(): void {
@@ -334,7 +282,7 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
     }, 3000);
   }
 
-  private handleSubmitError(): void {
+  private handleSubmitError(errorMsg?: string): void {
     this.isSubmitting = false;
     this.submitError = true;
     this.errorMessage = true;
@@ -378,7 +326,7 @@ export class ContactComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private loadFontAwesome() {
     const script = document.createElement('script');
-    script.src = 'https://kit.fontawesome.com/your-kit-code.js';  // Replace with your Font Awesome kit code
+    script.src = 'https://kit.fontawesome.com/your-kit-code.js';  
     script.crossOrigin = 'anonymous';
     document.head.appendChild(script);
   }

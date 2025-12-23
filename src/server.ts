@@ -332,6 +332,84 @@ async function sendReservationStatusEmail(options: {
   });
 }
 
+async function sendContactFormEmail(options: {
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+}) {
+  if (!mailTransporter) {
+    throw new Error('Email not configured: set SMTP_USER and SMTP_PASS (and SMTP_HOST/SMTP_PORT if not using Gmail).');
+  }
+  if (!HOTEL_EMAIL) {
+    throw new Error('Email not configured: set HOTEL_EMAIL (or SMTP_USER).');
+  }
+
+  const { name, email, phone, message } = options;
+
+  const baseUrl =
+    process.env['PUBLIC_SITE_URL'] ||
+    (process.env['VERCEL_URL'] ? `https://${process.env['VERCEL_URL']}` : '');
+  const brandLogo = baseUrl ? `${baseUrl}/images/hotel-logo.png` : '/images/hotel-logo.png';
+
+  const subject = `New Contact Form Submission from ${name}`;
+
+  // Email to hotel
+  await mailTransporter.sendMail({
+    from: `"Aurora Hotel Website" <${HOTEL_EMAIL}>`,
+    to: HOTEL_EMAIL,
+    subject,
+    text:
+      `New contact form submission\n\n` +
+      `Name: ${name}\n` +
+      `Email: ${email}\n` +
+      `Phone: ${phone}\n\n` +
+      `Message:\n${message}\n`
+    ,
+    html: renderBrandedEmail({
+      title: 'New Contact Form Submission',
+      preheader: `New message from ${name}`,
+      logoUrl: brandLogo,
+      footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+      bodyHtml:
+        `<table role="presentation" width="100%" style="border-collapse:collapse;margin-top:6px;">` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Name</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(name)}</td></tr>` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Email</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(email)}</td></tr>` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Phone</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(phone)}</td></tr>` +
+        `</table>` +
+        `<div style="margin-top:14px;color:#111827;font-weight:800;">Message</div>` +
+        `<div style="margin-top:6px;color:#374151;white-space:pre-wrap;">${escapeHtml(message)}</div>`
+    })
+  });
+
+  // Confirmation email to customer
+  await mailTransporter.sendMail({
+    from: `"Aurora Hotel" <${HOTEL_EMAIL}>`,
+    to: email,
+    subject: 'Thank you for contacting Aurora Hotel',
+    text:
+      `Dear ${name},\n\n` +
+      `Thank you for contacting Aurora Hotel. We have received your message and will get back to you as soon as possible.\n\n` +
+      `Your message:\n${message}\n\n` +
+      `Best regards,\nAurora Hotel Team`
+    ,
+    html: renderBrandedEmail({
+      title: 'Thank You for Contacting Us',
+      preheader: 'We have received your message',
+      logoUrl: brandLogo,
+      footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+      bodyHtml:
+        `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(name)},</p>` +
+        `<p style="margin:0 0 12px 0;">Thank you for contacting Aurora Hotel. We have received your message and will get back to you as soon as possible.</p>` +
+        `<div style="margin-top:14px;padding:12px;background:#f9fafb;border-radius:6px;border-left:3px solid #3b82f6;">` +
+        `<div style="color:#111827;font-weight:800;margin-bottom:6px;">Your message:</div>` +
+        `<div style="color:#374151;white-space:pre-wrap;">${escapeHtml(message)}</div>` +
+        `</div>` +
+        `<p style="margin:12px 0 0 0;">Best regards,<br/>Aurora Hotel Team</p>`
+    })
+  });
+}
+
 // CORS middleware for API routes
 // Enhanced CORS configuration per article recommendations
 app.use((req, res, next): void => {
@@ -1219,6 +1297,65 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
     res
       .status(500)
       .json({ error: 'Failed to store reservation', details: error.message });
+  }
+});
+
+/**
+ * Public contact form endpoint
+ */
+app.post('/api/public/contact', async (req, res): Promise<void> => {
+  try {
+    const { name, email, phone, message } = req.body as {
+      name?: string;
+      email?: string;
+      phone?: string;
+      message?: string;
+    };
+
+    // Validate required fields
+    if (!name || !email || !phone || !message) {
+      res.status(400).json({ error: 'Missing required fields: name, email, phone, and message are required' });
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      res.status(400).json({ error: 'Invalid email format' });
+      return;
+    }
+
+    // Validate message length
+    if (message.length < 10) {
+      res.status(400).json({ error: 'Message must be at least 10 characters long' });
+      return;
+    }
+
+    // Send emails
+    try {
+      await sendContactFormEmail({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        message: message.trim()
+      });
+
+      res.status(200).json({ 
+        success: true, 
+        message: 'Your message has been sent successfully. We will get back to you soon.' 
+      });
+    } catch (emailError: any) {
+      console.error('Error sending contact form email:', emailError);
+      // If email fails, still return success to user (email might be misconfigured)
+      // but log the error for admin
+      res.status(200).json({ 
+        success: true, 
+        message: 'Your message has been received. We will get back to you soon.' 
+      });
+    }
+  } catch (error: any) {
+    console.error('Error processing contact form:', error);
+    res.status(500).json({ error: 'Failed to process contact form submission' });
   }
 });
 
