@@ -188,9 +188,10 @@
   position: absolute;
   top: 110%;
   right: 0;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.98));
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06));
+  backdrop-filter: blur(34px) saturate(220%) contrast(1.05);
+  -webkit-backdrop-filter: blur(34px) saturate(220%) contrast(1.05);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   padding: 0.35rem 0;
@@ -358,7 +359,8 @@
 }
 
 .hamburger-menu.active span:nth-child(1) {
-  transform: rotate(45deg) translate(8px, 8px);
+  /* Centered, symmetric X */
+  transform: translateY(9px) rotate(45deg);
 }
 
 .hamburger-menu.active span:nth-child(2) {
@@ -366,7 +368,8 @@
 }
 
 .hamburger-menu.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(8px, -8px);
+  /* Centered, symmetric X */
+  transform: translateY(-9px) rotate(-45deg);
 }
 
 /* Mobile Menu Overlay */
@@ -415,7 +418,10 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .mobile-menu-header h3 {
@@ -447,6 +453,7 @@
 
 .mobile-menu-links {
   padding: 1rem 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015));
 }
 
 .mobile-menu-links a,
