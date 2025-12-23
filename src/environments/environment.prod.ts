@@ -3,8 +3,8 @@ export const environment = {
   // Empty string means relative URLs (same domain) - correct for Vercel
   apiUrl: '',
   // Vercel Serverless doesn't support long-lived Socket.IO/WebSocket servers.
-  // Use Supabase Realtime or host Socket.IO on a separate always-on server if needed.
-  enableWebsocket: false,
+  // This app uses polling-based updates in production instead of Socket.IO.
+  enableWebsocket: true,
   supabase: {
     url: 'https://jlsmvmycvnkfjqlicdrl.supabase.co',
   }

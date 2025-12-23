@@ -1,9 +1,8 @@
-import { Injectable } from '@angular/core';
-import { Observable, Subject } from 'rxjs';
-import { io, Socket } from 'socket.io-client';
-import { environment } from '../../environments/environment';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Inject, PLATFORM_ID } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Subject, Subscription, interval, startWith, switchMap, catchError, of } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface ReservationStatusUpdate {
   reservationId: number;
@@ -21,64 +20,146 @@ export interface RoomStatusUpdate {
   providedIn: 'root'
 })
 export class WebSocketService {
-  private socket: Socket | null = null;
+  // NOTE: This service used to use Socket.IO, but Vercel Serverless can't host WebSocket servers.
+  // We implement "near realtime" updates via polling the existing API.
   private reservationUpdateSubject = new Subject<ReservationStatusUpdate>();
   private roomUpdateSubject = new Subject<RoomStatusUpdate>();
   private isBrowser: boolean;
+  private sub = new Subscription();
+
+  private lastReservationsById = new Map<number, any>();
+  private lastRoomsById = new Map<number, any>();
 
   public reservationStatusUpdated$ = this.reservationUpdateSubject.asObservable();
   public roomStatusUpdated$ = this.roomUpdateSubject.asObservable();
 
-  constructor(@Inject(PLATFORM_ID) private platformId: Object) {
+  constructor(
+    private http: HttpClient,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
     
     if (this.isBrowser) {
       if (environment.enableWebsocket !== false) {
-        this.connect();
-      } else {
-        console.log('WebSocket disabled for this environment');
+        this.startPolling();
       }
     }
   }
 
-  private connect(): void {
-    if (this.socket?.connected) {
-      return;
+  private startPolling(): void {
+    // Poll fairly frequently, but keep it light to avoid hammering Vercel/Supabase.
+    const pollMs = 8000;
+
+    // Reservations (user or admin depending on permissions; 401/403 are ignored)
+    this.sub.add(
+      interval(pollMs)
+        .pipe(
+          startWith(0),
+          switchMap(() =>
+            this.http.get<any[]>(`${environment.apiUrl}/api/user/reservations`).pipe(
+              catchError(() => of(null))
+            )
+          )
+        )
+        .subscribe((rows) => {
+          if (!Array.isArray(rows)) return;
+          this.emitReservationDiffs(rows);
+        })
+    );
+
+    // Admin reservations (if authorized; 401/403 are ignored)
+    this.sub.add(
+      interval(pollMs)
+        .pipe(
+          startWith(0),
+          switchMap(() =>
+            this.http.get<any[]>(`${environment.apiUrl}/api/admin/reservations`).pipe(
+              catchError(() => of(null))
+            )
+          )
+        )
+        .subscribe((rows) => {
+          if (!Array.isArray(rows)) return;
+          this.emitReservationDiffs(rows);
+        })
+    );
+
+    // Rooms (admin; 401/403 are ignored)
+    this.sub.add(
+      interval(pollMs)
+        .pipe(
+          startWith(0),
+          switchMap(() =>
+            this.http.get<any[]>(`${environment.apiUrl}/api/admin/rooms`).pipe(
+              catchError(() => of(null))
+            )
+          )
+        )
+        .subscribe((rows) => {
+          if (!Array.isArray(rows)) return;
+          this.emitRoomDiffs(rows);
+        })
+    );
+  }
+
+  private emitReservationDiffs(rows: any[]): void {
+    for (const r of rows) {
+      const id = Number(r?.Id ?? r?.id);
+      if (!Number.isFinite(id)) continue;
+      const prev = this.lastReservationsById.get(id);
+      const status = r?.Status ?? r?.status;
+
+      if (!prev) {
+        this.lastReservationsById.set(id, r);
+        // Treat first-seen as an update so components can insert it.
+        if (status) {
+          this.reservationUpdateSubject.next({ reservationId: id, status, reservation: r });
+        }
+        continue;
+      }
+
+      const prevStatus = prev?.Status ?? prev?.status;
+      if (status && status !== prevStatus) {
+        this.lastReservationsById.set(id, r);
+        this.reservationUpdateSubject.next({ reservationId: id, status, reservation: r });
+      } else {
+        // Keep latest snapshot anyway (e.g., timestamps)
+        this.lastReservationsById.set(id, r);
+      }
     }
+  }
 
-    this.socket = io(environment.apiUrl, {
-      transports: ['websocket', 'polling']
-    });
+  private emitRoomDiffs(rows: any[]): void {
+    for (const room of rows) {
+      const id = Number(room?.Id ?? room?.id);
+      if (!Number.isFinite(id)) continue;
+      const prev = this.lastRoomsById.get(id);
+      const status = room?.Status ?? room?.status;
 
-    this.socket.on('connect', () => {
-      console.log('WebSocket connected');
-    });
+      if (!prev) {
+        this.lastRoomsById.set(id, room);
+        if (status) {
+          this.roomUpdateSubject.next({ roomId: id, status, room });
+        }
+        continue;
+      }
 
-    this.socket.on('disconnect', () => {
-      console.log('WebSocket disconnected');
-    });
-
-    this.socket.on('reservation-status-updated', (data: ReservationStatusUpdate) => {
-      this.reservationUpdateSubject.next(data);
-    });
-
-    this.socket.on('room-status-updated', (data: RoomStatusUpdate) => {
-      this.roomUpdateSubject.next(data);
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
-    });
+      const prevStatus = prev?.Status ?? prev?.status;
+      if (status && status !== prevStatus) {
+        this.lastRoomsById.set(id, room);
+        this.roomUpdateSubject.next({ roomId: id, status, room });
+      } else {
+        this.lastRoomsById.set(id, room);
+      }
+    }
   }
 
   disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
-    }
+    this.sub.unsubscribe();
   }
 
   isConnected(): boolean {
-    return this.socket?.connected ?? false;
+    // Polling doesn't have a "connected" state; return true when enabled in browser.
+    return this.isBrowser && environment.enableWebsocket !== false;
   }
 }

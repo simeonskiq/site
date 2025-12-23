@@ -41,7 +41,8 @@
               "entry": "src/server.ts"
             },
             "externalDependencies": [
-              "bcryptjs"
+              "bcryptjs",
+              "nodemailer"
             ]
           },
           "configurations": {

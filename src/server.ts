@@ -10,12 +10,135 @@ import { fileURLToPath } from 'node:url';
 import { getDbConnection } from './server/db.config.js';
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
+import nodemailer from 'nodemailer';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+
+/**
+ * Email (Nodemailer)
+ * NOTE: Vercel does not provide SMTP; you must set these env vars in Vercel Project Settings.
+ */
+const SMTP_HOST = process.env['SMTP_HOST'] || 'smtp.gmail.com';
+const SMTP_PORT = Number(process.env['SMTP_PORT'] || 587);
+const SMTP_USER = process.env['SMTP_USER'] || process.env['HOTEL_EMAIL'] || '';
+const SMTP_PASS = process.env['SMTP_PASS'] || '';
+const HOTEL_EMAIL = process.env['HOTEL_EMAIL'] || SMTP_USER || '';
+
+const mailTransporter =
+  SMTP_USER && SMTP_PASS
+    ? nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_PORT === 465,
+        auth: { user: SMTP_USER, pass: SMTP_PASS }
+      })
+    : null;
+
+async function sendReservationEmails(options: {
+  guestEmail: string;
+  guestName: string;
+  guestPhone?: string | null;
+  roomName: string;
+  roomPrice?: number | null;
+  checkIn: string;
+  checkOut: string;
+}) {
+  if (!mailTransporter) {
+    throw new Error('Email not configured: set SMTP_USER and SMTP_PASS (and SMTP_HOST/SMTP_PORT if not using Gmail).');
+  }
+  if (!HOTEL_EMAIL) {
+    throw new Error('Email not configured: set HOTEL_EMAIL (or SMTP_USER).');
+  }
+
+  const { guestEmail, guestName, guestPhone, roomName, roomPrice, checkIn, checkOut } = options;
+
+  const subject = `Reservation request for ${roomName} (${checkIn} - ${checkOut})`;
+
+  // Email to guest
+  await mailTransporter.sendMail({
+    from: `"Aurora Hotel" <${HOTEL_EMAIL}>`,
+    to: guestEmail,
+    subject: `Your reservation request for ${roomName}`,
+    text:
+      `Dear ${guestName},\n\n` +
+      `We have received your reservation request for ${roomName} from ${checkIn} to ${checkOut}.\n` +
+      `We will contact you shortly to confirm availability.\n\n` +
+      `Best regards,\nAurora Hotel`,
+    html:
+      `<p>Dear ${guestName},</p>` +
+      `<p>We have received your reservation request for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong>.</p>` +
+      `<p>We will contact you shortly to confirm availability.</p>` +
+      `<p>Best regards,<br/>Aurora Hotel</p>`
+  });
+
+  // Email to hotel
+  await mailTransporter.sendMail({
+    from: `"Aurora Hotel Website" <${HOTEL_EMAIL}>`,
+    to: HOTEL_EMAIL,
+    subject,
+    text:
+      `Reservation request\n\n` +
+      `Guest: ${guestName}\n` +
+      `Email: ${guestEmail}\n` +
+      `Phone: ${guestPhone || 'Not provided'}\n\n` +
+      `Room: ${roomName}\n` +
+      `Price per night: ${roomPrice ?? 'N/A'}\n` +
+      `Check-in: ${checkIn}\n` +
+      `Check-out: ${checkOut}\n`
+  });
+}
+
+async function sendReservationStatusEmail(options: {
+  to: string;
+  name: string;
+  roomName: string;
+  checkIn: string;
+  checkOut: string;
+  status: 'Approved' | 'Rejected' | 'Cancelled' | 'Completed';
+}) {
+  if (!mailTransporter) {
+    throw new Error('Email not configured: set SMTP_USER and SMTP_PASS (and SMTP_HOST/SMTP_PORT if not using Gmail).');
+  }
+  if (!HOTEL_EMAIL) {
+    throw new Error('Email not configured: set HOTEL_EMAIL (or SMTP_USER).');
+  }
+
+  const { to, name, roomName, checkIn, checkOut, status } = options;
+
+  let subject = '';
+  let textBody = '';
+  let htmlBody = '';
+
+  if (status === 'Approved') {
+    subject = `Reservation Approved - ${roomName}`;
+    textBody = `Dear ${name},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been approved.\n\nWe look forward to welcoming you!\n\nBest regards,\nAurora Hotel`;
+    htmlBody = `<p>Dear ${name},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>approved</strong>.</p><p>We look forward to welcoming you!</p><p>Best regards,<br/>Aurora Hotel</p>`;
+  } else if (status === 'Rejected') {
+    subject = `Reservation Update - ${roomName}`;
+    textBody = `Dear ${name},\n\nUnfortunately, your reservation request for ${roomName} from ${checkIn} to ${checkOut} has been rejected.\n\nPlease contact us if you have any questions or would like to make a new reservation.\n\nBest regards,\nAurora Hotel`;
+    htmlBody = `<p>Dear ${name},</p><p>Unfortunately, your reservation request for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>rejected</strong>.</p><p>Please contact us if you have any questions or would like to make a new reservation.</p><p>Best regards,<br/>Aurora Hotel</p>`;
+  } else if (status === 'Cancelled') {
+    subject = `Reservation Cancelled - ${roomName}`;
+    textBody = `Dear ${name},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been cancelled by the administration.\n\nIf you have any questions, please contact us.\n\nBest regards,\nAurora Hotel`;
+    htmlBody = `<p>Dear ${name},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>cancelled</strong> by the administration.</p><p>If you have any questions, please contact us.</p><p>Best regards,<br/>Aurora Hotel</p>`;
+  } else if (status === 'Completed') {
+    subject = `Reservation Completed - ${roomName}`;
+    textBody = `Dear ${name},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been marked as completed.\n\nThank you for staying with us!\n\nBest regards,\nAurora Hotel`;
+    htmlBody = `<p>Dear ${name},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been marked as <strong>completed</strong>.</p><p>Thank you for staying with us!</p><p>Best regards,<br/>Aurora Hotel</p>`;
+  }
+
+  await mailTransporter.sendMail({
+    from: `"Aurora Hotel" <${HOTEL_EMAIL}>`,
+    to,
+    subject,
+    text: textBody,
+    html: htmlBody
+  });
+}
 
 // CORS middleware for API routes
 // Enhanced CORS configuration per article recommendations
@@ -529,29 +652,60 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
     }
 
     const supabase = await getDbConnection();
-    const { data: reservations, error } = await supabase
-      .from('reservations')
-      .select(`
-        id,
-        room_id,
-        start_date,
-        end_date,
-        status,
-        total_price,
-        guest_first_name,
-        guest_last_name,
-        guest_email,
-        guest_phone,
-        notes,
-        created_at,
-        canceled_at
-      `)
-      .eq('user_id', req.user.userId)
-      .order('start_date', { ascending: false })
-      .order('created_at', { ascending: false });
 
-    if (error) {
-      throw error;
+    // completed_at is optional (some DBs may not have it yet).
+    let reservations: any[] | null = null;
+    try {
+      const { data, error } = await supabase
+        .from('reservations')
+        .select(`
+          id,
+          room_id,
+          start_date,
+          end_date,
+          status,
+          total_price,
+          guest_first_name,
+          guest_last_name,
+          guest_email,
+          guest_phone,
+          notes,
+          created_at,
+          canceled_at,
+          completed_at
+        `)
+        .eq('user_id', req.user.userId)
+        .order('start_date', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      reservations = data;
+    } catch (err: any) {
+      if (err?.code === '42703' && String(err?.message || '').includes('completed_at')) {
+        const { data, error } = await supabase
+          .from('reservations')
+          .select(`
+            id,
+            room_id,
+            start_date,
+            end_date,
+            status,
+            total_price,
+            guest_first_name,
+            guest_last_name,
+            guest_email,
+            guest_phone,
+            notes,
+            created_at,
+            canceled_at
+          `)
+          .eq('user_id', req.user.userId)
+          .order('start_date', { ascending: false })
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        reservations = data;
+      } else {
+        throw err;
+      }
     }
 
     // PostgREST embedded relations (rooms:room_id) require FK constraints in Supabase.
@@ -590,6 +744,7 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
         GuestPhone: r.guest_phone,
         Notes: r.notes,
         CreatedAt: r.created_at,
+        CompletedAt: r.completed_at,
         CanceledAt: r.canceled_at,
         CanceledBy: undefined,
         RoomName: room?.name,
@@ -832,6 +987,23 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
       throw insertError || new Error('Failed to create reservation');
     }
 
+    // Try to send emails, but do not fail the reservation if email sending fails
+    try {
+      const checkIn = start.toLocaleDateString();
+      const checkOut = end.toLocaleDateString();
+      await sendReservationEmails({
+        guestEmail: email!,
+        guestName: `${firstName} ${lastName}`,
+        guestPhone: phone || null,
+        roomName: roomName || 'Room',
+        roomPrice: pricePerNight ?? null,
+        checkIn,
+        checkOut
+      });
+    } catch (mailError) {
+      console.error('Failed to send reservation emails:', mailError);
+    }
+
     res.status(201).json({
       message: 'Reservation request stored successfully',
       reservation
@@ -910,6 +1082,7 @@ app.get(
       const supabase = await getDbConnection();
       const { status, userId, roomId } = req.query;
 
+      // completed_at is optional (some DBs may not have it yet).
       let query = supabase
         .from('reservations')
         .select(`
@@ -925,7 +1098,8 @@ app.get(
           guest_email,
           guest_phone,
           created_at,
-          canceled_at
+          canceled_at,
+          completed_at
         `)
         .order('created_at', { ascending: false });
 
@@ -941,10 +1115,42 @@ app.get(
         query = query.eq('room_id', Number(roomId));
       }
 
-      const { data: reservations, error } = await query;
+      let reservations: any[] | null = null;
+      try {
+        const { data, error } = await query;
+        if (error) throw error;
+        reservations = data;
+      } catch (err: any) {
+        if (err?.code === '42703' && String(err?.message || '').includes('completed_at')) {
+          let fallbackQuery = supabase
+            .from('reservations')
+            .select(`
+              id,
+              user_id,
+              room_id,
+              start_date,
+              end_date,
+              status,
+              total_price,
+              guest_first_name,
+              guest_last_name,
+              guest_email,
+              guest_phone,
+              created_at,
+              canceled_at
+            `)
+            .order('created_at', { ascending: false });
 
-      if (error) {
-        throw error;
+          if (status) fallbackQuery = fallbackQuery.eq('status', status as string);
+          if (userId) fallbackQuery = fallbackQuery.eq('user_id', Number(userId));
+          if (roomId) fallbackQuery = fallbackQuery.eq('room_id', Number(roomId));
+
+          const { data, error } = await fallbackQuery;
+          if (error) throw error;
+          reservations = data;
+        } else {
+          throw err;
+        }
       }
 
       const userIds = Array.from(
@@ -991,6 +1197,7 @@ app.get(
           GuestEmail: r.guest_email,
           GuestPhone: r.guest_phone,
           CreatedAt: r.created_at,
+          CompletedAt: r.completed_at,
           CanceledAt: r.canceled_at,
           CanceledBy: undefined,
           Email: user?.email || r.guest_email,
@@ -1045,16 +1252,41 @@ app.post(
       if (status === 'Cancelled') {
         updateData.canceled_at = new Date().toISOString();
       }
+      if (status === 'Completed') {
+        // Optional column (recommended): public.reservations.completed_at timestamp
+        updateData.completed_at = new Date().toISOString();
+      }
       
       // Update reservation
-      const { data: updatedReservation, error: updateError } = await supabase
-        .from('reservations')
-        .update(updateData)
-        .eq('id', reservationId)
-        .select()
-        .single();
+      let updatedReservation: any = null;
+      try {
+        const { data, error: updateError } = await supabase
+          .from('reservations')
+          .update(updateData)
+          .eq('id', reservationId)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        updatedReservation = data;
+      } catch (err: any) {
+        // If completed_at column doesn't exist yet, retry without it.
+        if (status === 'Completed' && err?.code === '42703' && String(err?.message || '').includes('completed_at')) {
+          const retryData = { ...updateData };
+          delete retryData.completed_at;
+          const { data, error: updateError } = await supabase
+            .from('reservations')
+            .update(retryData)
+            .eq('id', reservationId)
+            .select()
+            .single();
+          if (updateError) throw updateError;
+          updatedReservation = data;
+        } else {
+          throw err;
+        }
+      }
 
-      if (updateError || !updatedReservation) {
+      if (!updatedReservation) {
         res.status(404).json({ error: 'Reservation not found' });
         return;
       }
@@ -1083,9 +1315,48 @@ app.post(
         GuestPhone: updatedReservation.guest_phone,
         Notes: updatedReservation.notes,
         CreatedAt: updatedReservation.created_at,
+        CompletedAt: updatedReservation.completed_at,
         CanceledAt: updatedReservation.canceled_at,
         CanceledBy: undefined
       };
+
+      // Send status email (don't fail request if email fails)
+      if (['Approved', 'Rejected', 'Cancelled', 'Completed'].includes(status)) {
+        try {
+          const roomId = updatedReservation.room_id;
+          const { data: room } = roomId
+            ? await supabase.from('rooms').select('name').eq('id', roomId).single()
+            : { data: null };
+
+          let toEmail: string | null = updatedReservation.guest_email || null;
+          let displayName: string =
+            `${updatedReservation.guest_first_name || ''} ${updatedReservation.guest_last_name || ''}`.trim() || 'Guest';
+
+          if (updatedReservation.user_id) {
+            const { data: user } = await supabase
+              .from('users')
+              .select('email, first_name, last_name')
+              .eq('id', updatedReservation.user_id)
+              .single();
+            if (user?.email) toEmail = user.email;
+            const uName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim();
+            if (uName) displayName = uName;
+          }
+
+          if (toEmail) {
+            await sendReservationStatusEmail({
+              to: toEmail,
+              name: displayName,
+              roomName: room?.name || 'Room',
+              checkIn: new Date(updatedReservation.start_date).toLocaleDateString(),
+              checkOut: new Date(updatedReservation.end_date).toLocaleDateString(),
+              status: status as any
+            });
+          }
+        } catch (mailErr) {
+          console.error('Failed to send status update email:', mailErr);
+        }
+      }
 
       res.json(transformed);
     } catch (error: any) {

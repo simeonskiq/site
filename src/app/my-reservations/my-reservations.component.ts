@@ -80,6 +80,7 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
       checkout: this.translationService.translate('reservations.checkout'),
       totalPrice: this.translationService.translate('reservations.totalPrice'),
       created: this.translationService.translate('reservations.created'),
+      completed: this.translationService.translate('reservations.completed'),
       cancel: this.translationService.translate('reservations.cancel'),
       cannotCancel: this.translationService.translate('reservations.cannotCancel'),
       canceledBy: this.translationService.translate('reservations.canceledBy'),
@@ -212,7 +213,10 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
 
   getCancelMessage(reservation: any): string {
     if (reservation.Status === 'Cancelled') {
-      return reservation.CanceledBy === 'User' 
+      if (!reservation.CanceledBy) {
+        return this.translations.canceled || 'Canceled';
+      }
+      return reservation.CanceledBy === 'User'
         ? (this.translations.canceledBy || 'Canceled by you')
         : (this.translations.canceledByAdmin || 'Canceled by admin');
     }
