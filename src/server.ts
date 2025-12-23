@@ -544,8 +544,7 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
         guest_phone,
         notes,
         created_at,
-        canceled_at,
-        canceled_by
+        canceled_at
       `)
       .eq('user_id', req.user.userId)
       .order('start_date', { ascending: false })
@@ -592,7 +591,7 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
         Notes: r.notes,
         CreatedAt: r.created_at,
         CanceledAt: r.canceled_at,
-        CanceledBy: r.canceled_by,
+        CanceledBy: undefined,
         RoomName: room?.name,
         RoomType: room?.type,
         BasePrice: room?.base_price
@@ -654,7 +653,6 @@ app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthReq
       .update({
         status: 'Cancelled',
         canceled_at: new Date().toISOString(),
-        canceled_by: 'User',
         updated_at: new Date().toISOString()
       })
       .eq('id', reservationId)
@@ -927,8 +925,7 @@ app.get(
           guest_email,
           guest_phone,
           created_at,
-          canceled_at,
-          canceled_by
+          canceled_at
         `)
         .order('created_at', { ascending: false });
 
@@ -995,17 +992,13 @@ app.get(
           GuestPhone: r.guest_phone,
           CreatedAt: r.created_at,
           CanceledAt: r.canceled_at,
-          CanceledBy: r.canceled_by,
+          CanceledBy: undefined,
           Email: user?.email || r.guest_email,
           FirstName: user?.first_name || r.guest_first_name,
           LastName: user?.last_name || r.guest_last_name,
           RoomName: room?.name,
           DisplayStatus:
-            r.status === 'Cancelled' && r.canceled_by === 'User'
-              ? 'Canceled by user'
-              : r.status === 'Cancelled' && r.canceled_by === 'Admin'
-                ? 'Canceled by admin'
-                : r.status
+            r.status === 'Cancelled' ? 'Canceled' : r.status
         };
       });
 
@@ -1050,7 +1043,6 @@ app.post(
       };
       
       if (status === 'Cancelled') {
-        updateData.canceled_by = 'Admin';
         updateData.canceled_at = new Date().toISOString();
       }
       
@@ -1092,7 +1084,7 @@ app.post(
         Notes: updatedReservation.notes,
         CreatedAt: updatedReservation.created_at,
         CanceledAt: updatedReservation.canceled_at,
-        CanceledBy: updatedReservation.canceled_by
+        CanceledBy: undefined
       };
 
       res.json(transformed);
