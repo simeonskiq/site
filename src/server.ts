@@ -545,12 +545,7 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
         notes,
         created_at,
         canceled_at,
-        canceled_by,
-        rooms:room_id (
-          name,
-          type,
-          base_price
-        )
+        canceled_by
       `)
       .eq('user_id', req.user.userId)
       .order('start_date', { ascending: false })
@@ -560,26 +555,49 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
       throw error;
     }
 
+    // PostgREST embedded relations (rooms:room_id) require FK constraints in Supabase.
+    // To avoid 500s when FKs aren't configured, do a manual join in code.
+    const roomIds = Array.from(
+      new Set((reservations || []).map((r: any) => r.room_id).filter((id: any) => id != null))
+    );
+
+    let roomsById = new Map<number, any>();
+    if (roomIds.length > 0) {
+      const { data: rooms, error: roomsError } = await supabase
+        .from('rooms')
+        .select('id, name, type, base_price')
+        .in('id', roomIds);
+
+      if (roomsError) {
+        throw roomsError;
+      }
+
+      roomsById = new Map((rooms || []).map((r: any) => [r.id, r]));
+    }
+
     // Transform the data to match expected format
-    const transformed = reservations?.map((r: any) => ({
-      Id: r.id,
-      RoomId: r.room_id,
-      StartDate: r.start_date,
-      EndDate: r.end_date,
-      Status: r.status,
-      TotalPrice: r.total_price,
-      GuestFirstName: r.guest_first_name,
-      GuestLastName: r.guest_last_name,
-      GuestEmail: r.guest_email,
-      GuestPhone: r.guest_phone,
-      Notes: r.notes,
-      CreatedAt: r.created_at,
-      CanceledAt: r.canceled_at,
-      CanceledBy: r.canceled_by,
-      RoomName: r.rooms?.name,
-      RoomType: r.rooms?.type,
-      BasePrice: r.rooms?.base_price
-    })) || [];
+    const transformed = (reservations || []).map((r: any) => {
+      const room = roomsById.get(r.room_id);
+      return {
+        Id: r.id,
+        RoomId: r.room_id,
+        StartDate: r.start_date,
+        EndDate: r.end_date,
+        Status: r.status,
+        TotalPrice: r.total_price,
+        GuestFirstName: r.guest_first_name,
+        GuestLastName: r.guest_last_name,
+        GuestEmail: r.guest_email,
+        GuestPhone: r.guest_phone,
+        Notes: r.notes,
+        CreatedAt: r.created_at,
+        CanceledAt: r.canceled_at,
+        CanceledBy: r.canceled_by,
+        RoomName: room?.name,
+        RoomType: room?.type,
+        BasePrice: room?.base_price
+      };
+    });
 
     res.json(transformed);
   } catch (error: any) {
@@ -906,15 +924,7 @@ app.get(
           guest_phone,
           created_at,
           canceled_at,
-          canceled_by,
-          users:user_id (
-            email,
-            first_name,
-            last_name
-          ),
-          rooms:room_id (
-            name
-          )
+          canceled_by
         `)
         .order('created_at', { ascending: false });
 
@@ -936,32 +946,64 @@ app.get(
         throw error;
       }
 
+      const userIds = Array.from(
+        new Set((reservations || []).map((r: any) => r.user_id).filter((id: any) => id != null))
+      );
+      const roomIds = Array.from(
+        new Set((reservations || []).map((r: any) => r.room_id).filter((id: any) => id != null))
+      );
+
+      let usersById = new Map<number, any>();
+      if (userIds.length > 0) {
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id, email, first_name, last_name')
+          .in('id', userIds);
+        if (usersError) throw usersError;
+        usersById = new Map((users || []).map((u: any) => [u.id, u]));
+      }
+
+      let roomsById = new Map<number, any>();
+      if (roomIds.length > 0) {
+        const { data: rooms, error: roomsError } = await supabase
+          .from('rooms')
+          .select('id, name')
+          .in('id', roomIds);
+        if (roomsError) throw roomsError;
+        roomsById = new Map((rooms || []).map((r: any) => [r.id, r]));
+      }
+
       // Transform data to match expected format
-      const transformed = reservations?.map((r: any) => ({
-        Id: r.id,
-        UserId: r.user_id,
-        RoomId: r.room_id,
-        StartDate: r.start_date,
-        EndDate: r.end_date,
-        Status: r.status,
-        TotalPrice: r.total_price,
-        GuestFirstName: r.guest_first_name,
-        GuestLastName: r.guest_last_name,
-        GuestEmail: r.guest_email,
-        GuestPhone: r.guest_phone,
-        CreatedAt: r.created_at,
-        CanceledAt: r.canceled_at,
-        CanceledBy: r.canceled_by,
-        Email: r.users?.email || r.guest_email,
-        FirstName: r.users?.first_name || r.guest_first_name,
-        LastName: r.users?.last_name || r.guest_last_name,
-        RoomName: r.rooms?.name,
-        DisplayStatus: r.status === 'Cancelled' && r.canceled_by === 'User' 
-          ? 'Canceled by user'
-          : r.status === 'Cancelled' && r.canceled_by === 'Admin'
-          ? 'Canceled by admin'
-          : r.status
-      })) || [];
+      const transformed = (reservations || []).map((r: any) => {
+        const user = usersById.get(r.user_id);
+        const room = roomsById.get(r.room_id);
+        return {
+          Id: r.id,
+          UserId: r.user_id,
+          RoomId: r.room_id,
+          StartDate: r.start_date,
+          EndDate: r.end_date,
+          Status: r.status,
+          TotalPrice: r.total_price,
+          GuestFirstName: r.guest_first_name,
+          GuestLastName: r.guest_last_name,
+          GuestEmail: r.guest_email,
+          GuestPhone: r.guest_phone,
+          CreatedAt: r.created_at,
+          CanceledAt: r.canceled_at,
+          CanceledBy: r.canceled_by,
+          Email: user?.email || r.guest_email,
+          FirstName: user?.first_name || r.guest_first_name,
+          LastName: user?.last_name || r.guest_last_name,
+          RoomName: room?.name,
+          DisplayStatus:
+            r.status === 'Cancelled' && r.canceled_by === 'User'
+              ? 'Canceled by user'
+              : r.status === 'Cancelled' && r.canceled_by === 'Admin'
+                ? 'Canceled by admin'
+                : r.status
+        };
+      });
 
       res.json(transformed);
     } catch (error: any) {

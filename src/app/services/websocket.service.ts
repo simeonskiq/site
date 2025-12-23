@@ -33,7 +33,11 @@ export class WebSocketService {
     this.isBrowser = isPlatformBrowser(this.platformId);
     
     if (this.isBrowser) {
-      this.connect();
+      if (environment.enableWebsocket !== false) {
+        this.connect();
+      } else {
+        console.log('WebSocket disabled for this environment');
+      }
     }
   }
 
