@@ -602,7 +602,11 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
     res.json(transformed);
   } catch (error: any) {
     console.error('User reservations error:', error);
-    res.status(500).json({ error: 'Failed to load reservations', details: error.message });
+    res.status(500).json({
+      error: 'Failed to load reservations',
+      code: error?.code,
+      details: error?.message || error?.details || String(error)
+    });
   }
 });
 
@@ -1010,7 +1014,11 @@ app.get(
       console.error('List reservations error:', error);
       res
         .status(500)
-        .json({ error: 'Failed to load reservations', details: error.message });
+        .json({
+          error: 'Failed to load reservations',
+          code: error?.code,
+          details: error?.message || error?.details || String(error)
+        });
     }
   }
 );
