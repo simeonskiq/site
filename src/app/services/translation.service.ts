@@ -294,6 +294,18 @@ export class TranslationService {
       en: 'Cancel',
       bg: 'Отказ'
     },
+    'bookingModal.confirmReservationTitle': {
+      en: 'Confirm Reservation',
+      bg: 'Потвърди резервация'
+    },
+    'bookingModal.confirmReservationMessage': {
+      en: 'Are you sure you want to confirm your reservation?',
+      bg: 'Сигурни ли сте, че искате да потвърдите резервацията си?'
+    },
+    'bookingModal.confirmButton': {
+      en: 'Confirm',
+      bg: 'Потвърди'
+    },
     'reservations.cancel': {
       en: 'Cancel Reservation',
       bg: 'Отмени резервация'

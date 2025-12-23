@@ -74,6 +74,130 @@ const mailTransporter =
       })
     : null;
 
+// Email translations
+const emailTranslations = {
+  en: {
+    reservationRequest: {
+      subject: 'Reservation request for {roomName} ({checkIn} - {checkOut})',
+      guestSubject: 'Your reservation request for {roomName}',
+      title: 'Your reservation request is received!',
+      preheader: 'Reservation request for {roomName} ({checkIn} – {checkOut})',
+      greeting: 'Dear {guestName},',
+      body: 'We have received your reservation request for <strong>{roomName}</strong> from <strong>{checkIn}</strong> to <strong>{checkOut}</strong>.',
+      footer: 'We will contact you shortly to confirm availability.',
+      closing: 'Best regards,<br/>Aurora Hotel',
+      textBody: 'Dear {guestName},\n\nWe have received your reservation request for {roomName} from {checkIn} to {checkOut}.\nWe will contact you shortly to confirm availability.\n\nBest regards,\nAurora Hotel',
+      staffTitle: 'New reservation request',
+      staffPreheader: 'New reservation request for {roomName}',
+      guest: 'Guest',
+      email: 'Email',
+      phone: 'Phone',
+      room: 'Room',
+      dates: 'Dates',
+      pricePerNight: 'Price per night',
+      notProvided: 'Not provided',
+      reservationRequest: 'Reservation request',
+      bookingId: 'Booking ID: {bookingCode}'
+    },
+    statusUpdate: {
+      approved: {
+        subject: 'Reservation Approved - {roomName}',
+        title: 'Reservation Approved',
+        preheader: 'Your reservation for {roomName} is approved',
+        greeting: 'Dear {userName},',
+        body: 'Your reservation for <strong>{roomName}</strong> from <strong>{checkIn}</strong> to <strong>{checkOut}</strong> has been <strong>approved</strong>.',
+        footer: 'We look forward to welcoming you!',
+        closing: 'Best regards,<br/>Aurora Hotel',
+        textBody: 'Dear {userName},\n\nYour reservation for {roomName} from {checkIn} to {checkOut} has been approved.\n\nWe look forward to welcoming you!\n\nBest regards,\nAurora Hotel'
+      },
+      rejected: {
+        subject: 'Reservation Update - {roomName}',
+        title: 'Reservation Update',
+        preheader: 'Your reservation for {roomName} was rejected',
+        greeting: 'Dear {userName},',
+        body: 'Unfortunately, your reservation request for <strong>{roomName}</strong> from <strong>{checkIn}</strong> to <strong>{checkOut}</strong> has been <strong>rejected</strong>.',
+        footer: 'Please contact us if you have any questions or would like to make a new reservation.',
+        closing: 'Best regards,<br/>Aurora Hotel',
+        textBody: 'Dear {userName},\n\nUnfortunately, your reservation request for {roomName} from {checkIn} to {checkOut} has been rejected.\n\nPlease contact us if you have any questions or would like to make a new reservation.\n\nBest regards,\nAurora Hotel'
+      },
+      cancelled: {
+        subject: 'Reservation Cancelled - {roomName}',
+        title: 'Reservation Cancelled',
+        preheader: 'Your reservation for {roomName} was cancelled',
+        greeting: 'Dear {userName},',
+        body: 'Your reservation for <strong>{roomName}</strong> from <strong>{checkIn}</strong> to <strong>{checkOut}</strong> has been <strong>cancelled</strong> by the administration.',
+        footer: 'If you have any questions, please contact us.',
+        closing: 'Best regards,<br/>Aurora Hotel',
+        textBody: 'Dear {userName},\n\nYour reservation for {roomName} from {checkIn} to {checkOut} has been cancelled by the administration.\n\nIf you have any questions, please contact us.\n\nBest regards,\nAurora Hotel'
+      }
+    }
+  },
+  bg: {
+    reservationRequest: {
+      subject: 'Заявка за резервация за {roomName} ({checkIn} - {checkOut})',
+      guestSubject: 'Вашата заявка за резервация за {roomName}',
+      title: 'Вашата заявка за резервация е получена!',
+      preheader: 'Заявка за резервация за {roomName} ({checkIn} – {checkOut})',
+      greeting: 'Уважаеми/а {guestName},',
+      body: 'Получихме вашата заявка за резервация за <strong>{roomName}</strong> от <strong>{checkIn}</strong> до <strong>{checkOut}</strong>.',
+      footer: 'Ще се свържем с вас скоро, за да потвърдим наличността.',
+      closing: 'С уважение,<br/>Хотел Аврора',
+      textBody: 'Уважаеми/а {guestName},\n\nПолучихме вашата заявка за резервация за {roomName} от {checkIn} до {checkOut}.\nЩе се свържем с вас скоро, за да потвърдим наличността.\n\nС уважение,\nХотел Аврора',
+      staffTitle: 'Нова заявка за резервация',
+      staffPreheader: 'Нова заявка за резервация за {roomName}',
+      guest: 'Гост',
+      email: 'Имейл',
+      phone: 'Телефон',
+      room: 'Стая',
+      dates: 'Дати',
+      pricePerNight: 'Цена на нощ',
+      notProvided: 'Не е предоставен',
+      reservationRequest: 'Заявка за резервация',
+      bookingId: 'Номер на резервация: {bookingCode}'
+    },
+    statusUpdate: {
+      approved: {
+        subject: 'Резервация одобрена - {roomName}',
+        title: 'Резервация одобрена',
+        preheader: 'Вашата резервация за {roomName} е одобрена',
+        greeting: 'Уважаеми/а {userName},',
+        body: 'Вашата резервация за <strong>{roomName}</strong> от <strong>{checkIn}</strong> до <strong>{checkOut}</strong> е <strong>одобрена</strong>.',
+        footer: 'Очакваме с нетърпение да ви приветстваме!',
+        closing: 'С уважение,<br/>Хотел Аврора',
+        textBody: 'Уважаеми/а {userName},\n\nВашата резервация за {roomName} от {checkIn} до {checkOut} е одобрена.\n\nОчакваме с нетърпение да ви приветстваме!\n\nС уважение,\nХотел Аврора'
+      },
+      rejected: {
+        subject: 'Актуализация на резервация - {roomName}',
+        title: 'Актуализация на резервация',
+        preheader: 'Вашата резервация за {roomName} беше отхвърлена',
+        greeting: 'Уважаеми/а {userName},',
+        body: 'За съжаление, вашата заявка за резервация за <strong>{roomName}</strong> от <strong>{checkIn}</strong> до <strong>{checkOut}</strong> беше <strong>отхвърлена</strong>.',
+        footer: 'Моля, свържете се с нас, ако имате въпроси или искате да направите нова резервация.',
+        closing: 'С уважение,<br/>Хотел Аврора',
+        textBody: 'Уважаеми/а {userName},\n\nЗа съжаление, вашата заявка за резервация за {roomName} от {checkIn} до {checkOut} беше отхвърлена.\n\nМоля, свържете се с нас, ако имате въпроси или искате да направите нова резервация.\n\nС уважение,\nХотел Аврора'
+      },
+      cancelled: {
+        subject: 'Резервация отменена - {roomName}',
+        title: 'Резервация отменена',
+        preheader: 'Вашата резервация за {roomName} беше отменена',
+        greeting: 'Уважаеми/а {userName},',
+        body: 'Вашата резервация за <strong>{roomName}</strong> от <strong>{checkIn}</strong> до <strong>{checkOut}</strong> беше <strong>отменена</strong> от администрацията.',
+        footer: 'Ако имате въпроси, моля, свържете се с нас.',
+        closing: 'С уважение,<br/>Хотел Аврора',
+        textBody: 'Уважаеми/а {userName},\n\nВашата резервация за {roomName} от {checkIn} до {checkOut} беше отменена от администрацията.\n\nАко имате въпроси, моля, свържете се с нас.\n\nС уважение,\nХотел Аврора'
+      }
+    }
+  }
+};
+
+function translateEmail(template: string, params: Record<string, string>, lang: 'en' | 'bg' = 'en'): string {
+  let result = template;
+  for (const [key, value] of Object.entries(params)) {
+    result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+  }
+  return result;
+}
+
 async function sendReservationEmails(options: {
   guestEmail: string;
   guestName: string;
@@ -83,6 +207,7 @@ async function sendReservationEmails(options: {
   checkIn: string;
   checkOut: string;
   bookingCode?: string | null;
+  language?: 'en' | 'bg';
 }) {
   if (!mailTransporter) {
     throw new Error('Email not configured: set SMTP_USER and SMTP_PASS (and SMTP_HOST/SMTP_PORT if not using Gmail).');
@@ -96,52 +221,55 @@ async function sendReservationEmails(options: {
     roomPrice,
     checkIn,
     checkOut,
-    bookingCode
+    bookingCode,
+    language = 'en'
   } = options;
 
-  const subject = `Reservation request for ${roomName} (${checkIn} - ${checkOut})`;
+  const lang = (language === 'bg' ? 'bg' : 'en') as 'en' | 'bg';
+  const t = emailTranslations[lang].reservationRequest;
+
+  const subject = translateEmail(t.subject, { roomName, checkIn, checkOut });
   const baseUrl = getPublicBaseUrl();
   const brandLogo = normalizeImageUrl('/images/hotel-logo.png', baseUrl);
-  const bookingIdText = bookingCode ? `Booking ID: ${bookingCode}\n\n` : '';
+  const bookingIdText = bookingCode ? translateEmail(t.bookingId, { bookingCode }) + '\n\n' : '';
   const textBody = (
-    `Reservation request\n\n` +
+    translateEmail(t.reservationRequest, {}) + '\n\n' +
     bookingIdText +
-    `Guest: ${guestName}\n` +
-    `Email: ${guestEmail}\n` +
-    `Phone: ${guestPhone || 'Not provided'}\n\n` +
-    `Room: ${roomName}\n` +
-    `Price per night: ${roomPrice ?? 'N/A'}\n` +
-    `Check-in: ${checkIn}\n` +
-    `Check-out: ${checkOut}\n`
+    `${t.guest}: ${guestName}\n` +
+    `${t.email}: ${guestEmail}\n` +
+    `${t.phone}: ${guestPhone || t.notProvided}\n\n` +
+    `${t.room}: ${roomName}\n` +
+    `${t.pricePerNight}: ${roomPrice ?? 'N/A'}\n` +
+    `${t.dates}: ${checkIn} - ${checkOut}\n`
   ).trim();
 
   const htmlGuest = renderBrandedEmail({
-    title: 'Your reservation request is received!',
-    preheader: `Reservation request for ${roomName} (${checkIn} – ${checkOut})`,
+    title: translateEmail(t.title, {}),
+    preheader: translateEmail(t.preheader, { roomName, checkIn, checkOut }),
     bookingCode: bookingCode || null,
     logoUrl: brandLogo,
     footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
     bodyHtml:
-      `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(guestName)},</p>` +
-      `<p style="margin:0 0 12px 0;">We have received your reservation request for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong>.</p>` +
-      `<p style="margin:0 0 12px 0;">We will contact you shortly to confirm availability.</p>` +
-      `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+      `<p style="margin:0 0 12px 0;">${translateEmail(t.greeting, { guestName: escapeHtml(guestName) })}</p>` +
+      `<p style="margin:0 0 12px 0;">${translateEmail(t.body, { roomName: escapeHtml(roomName), checkIn: escapeHtml(checkIn), checkOut: escapeHtml(checkOut) })}</p>` +
+      `<p style="margin:0 0 12px 0;">${translateEmail(t.footer, {})}</p>` +
+      `<p style="margin:0;">${translateEmail(t.closing, {})}</p>`
   });
 
   const htmlStaff = renderBrandedEmail({
-    title: 'New reservation request',
-    preheader: `New reservation request for ${roomName}`,
+    title: translateEmail(t.staffTitle, {}),
+    preheader: translateEmail(t.staffPreheader, { roomName }),
     bookingCode: bookingCode || null,
     logoUrl: brandLogo,
     footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
     bodyHtml:
       `<table role="presentation" width="100%" style="border-collapse:collapse;margin-top:6px;">` +
-      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Guest</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestName)}</td></tr>` +
-      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Email</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestEmail)}</td></tr>` +
-      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Phone</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestPhone || 'Not provided')}</td></tr>` +
-      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Room</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(roomName)}</td></tr>` +
-      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Dates</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(checkIn)} – ${escapeHtml(checkOut)}</td></tr>` +
-      `<tr><td style="padding:10px 0;color:#111827;font-weight:800;">Price per night</td><td align="right" style="padding:10px 0;color:#111827;">${escapeHtml(String(roomPrice ?? 'N/A'))}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">${t.guest}</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestName)}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">${t.email}</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestEmail)}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">${t.phone}</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestPhone || t.notProvided)}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">${t.room}</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(roomName)}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">${t.dates}</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(checkIn)} – ${escapeHtml(checkOut)}</td></tr>` +
+      `<tr><td style="padding:10px 0;color:#111827;font-weight:800;">${t.pricePerNight}</td><td align="right" style="padding:10px 0;color:#111827;">${escapeHtml(String(roomPrice ?? 'N/A'))}</td></tr>` +
       `</table>`
   });
 
@@ -149,20 +277,17 @@ async function sendReservationEmails(options: {
   await mailTransporter.sendMail({
     from: `"Aurora Hotel" <${HOTEL_EMAIL}>`,
     to: guestEmail,
-    subject: `Your reservation request for ${roomName}`,
-    text:
-      `Dear ${guestName},\n\n` +
-      `We have received your reservation request for ${roomName} from ${checkIn} to ${checkOut}.\n` +
-      `We will contact you shortly to confirm availability.\n\n` +
-      `Best regards,\nAurora Hotel`,
+    subject: translateEmail(t.guestSubject, { roomName }),
+    text: translateEmail(t.textBody, { guestName, roomName, checkIn, checkOut }),
     html: htmlGuest
   });
 
-  // Email to hotel
+  // Email to hotel (always in English for staff)
+  const tStaff = emailTranslations.en.reservationRequest;
   await mailTransporter.sendMail({
     from: `"Aurora Hotel Website" <${HOTEL_EMAIL}>`,
     to: HOTEL_EMAIL,
-    subject,
+    subject: translateEmail(tStaff.subject, { roomName, checkIn, checkOut }),
     text: textBody,
     html: htmlStaff
   });
@@ -957,54 +1082,76 @@ app.post(
 
         if (userEmail && status && ['Approved', 'Rejected', 'Cancelled'].includes(status)) {
           try {
+            let userLanguage: 'en' | 'bg' = 'en';
+            if (reservationData.user_id) {
+              try {
+                const { data: userPrefs } = await supabase
+                  .from('users')
+                  .select('language, preferred_language')
+                  .eq('id', reservationData.user_id)
+                  .single();
+                const lang = userPrefs?.language || userPrefs?.preferred_language;
+                if (lang === 'bg' || lang === 'en') {
+                  userLanguage = lang;
+                }
+              } catch (err) {
+                console.log('Could not fetch user language preference, defaulting to English');
+              }
+            }
+
+            const t = emailTranslations[userLanguage].statusUpdate;
+            let emailTemplate;
             let subject = '';
             let textBody = '';
             let htmlBody = '';
 
             if (status === 'Approved') {
-              subject = `Reservation Approved - ${roomName}`;
-              textBody = `Dear ${userName},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been approved.\n\nWe look forward to welcoming you!\n\nBest regards,\nAurora Hotel`;
+              emailTemplate = t.approved;
+              subject = translateEmail(emailTemplate.subject, { roomName });
+              textBody = translateEmail(emailTemplate.textBody, { userName, roomName, checkIn, checkOut });
               htmlBody = renderBrandedEmail({
-                title: 'Reservation Approved',
-                preheader: `Your reservation for ${roomName} is approved`,
+                title: translateEmail(emailTemplate.title, {}),
+                preheader: translateEmail(emailTemplate.preheader, { roomName }),
                 bookingCode,
                 logoUrl: brandLogo,
                 footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
                 bodyHtml:
-                  `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(userName)},</p>` +
-                  `<p style="margin:0 0 12px 0;">Your reservation for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>approved</strong>.</p>` +
-                  `<p style="margin:0 0 12px 0;">We look forward to welcoming you!</p>` +
-                  `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.greeting, { userName: escapeHtml(userName) })}</p>` +
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.body, { roomName: escapeHtml(roomName), checkIn: escapeHtml(checkIn), checkOut: escapeHtml(checkOut) })}</p>` +
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.footer, {})}</p>` +
+                  `<p style="margin:0;">${translateEmail(emailTemplate.closing, {})}</p>`
               });
             } else if (status === 'Rejected') {
-              subject = `Reservation Update - ${roomName}`;
-              textBody = `Dear ${userName},\n\nUnfortunately, your reservation request for ${roomName} from ${checkIn} to ${checkOut} has been rejected.\n\nPlease contact us if you have any questions or would like to make a new reservation.\n\nBest regards,\nAurora Hotel`;
+              emailTemplate = t.rejected;
+              subject = translateEmail(emailTemplate.subject, { roomName });
+              textBody = translateEmail(emailTemplate.textBody, { userName, roomName, checkIn, checkOut });
               htmlBody = renderBrandedEmail({
-                title: 'Reservation Update',
-                preheader: `Your reservation for ${roomName} was rejected`,
+                title: translateEmail(emailTemplate.title, {}),
+                preheader: translateEmail(emailTemplate.preheader, { roomName }),
                 bookingCode,
                 logoUrl: brandLogo,
                 footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
                 bodyHtml:
-                  `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(userName)},</p>` +
-                  `<p style="margin:0 0 12px 0;">Unfortunately, your reservation request for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>rejected</strong>.</p>` +
-                  `<p style="margin:0 0 12px 0;">Please contact us if you have any questions or would like to make a new reservation.</p>` +
-                  `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.greeting, { userName: escapeHtml(userName) })}</p>` +
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.body, { roomName: escapeHtml(roomName), checkIn: escapeHtml(checkIn), checkOut: escapeHtml(checkOut) })}</p>` +
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.footer, {})}</p>` +
+                  `<p style="margin:0;">${translateEmail(emailTemplate.closing, {})}</p>`
               });
             } else if (status === 'Cancelled') {
-              subject = `Reservation Cancelled - ${roomName}`;
-              textBody = `Dear ${userName},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been cancelled by the administration.\n\nIf you have any questions, please contact us.\n\nBest regards,\nAurora Hotel`;
+              emailTemplate = t.cancelled;
+              subject = translateEmail(emailTemplate.subject, { roomName });
+              textBody = translateEmail(emailTemplate.textBody, { userName, roomName, checkIn, checkOut });
               htmlBody = renderBrandedEmail({
-                title: 'Reservation Cancelled',
-                preheader: `Your reservation for ${roomName} was cancelled`,
+                title: translateEmail(emailTemplate.title, {}),
+                preheader: translateEmail(emailTemplate.preheader, { roomName }),
                 bookingCode,
                 logoUrl: brandLogo,
                 footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
                 bodyHtml:
-                  `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(userName)},</p>` +
-                  `<p style="margin:0 0 12px 0;">Your reservation for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>cancelled</strong> by the administration.</p>` +
-                  `<p style="margin:0 0 12px 0;">If you have any questions, please contact us.</p>` +
-                  `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.greeting, { userName: escapeHtml(userName) })}</p>` +
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.body, { roomName: escapeHtml(roomName), checkIn: escapeHtml(checkIn), checkOut: escapeHtml(checkOut) })}</p>` +
+                  `<p style="margin:0 0 12px 0;">${translateEmail(emailTemplate.footer, {})}</p>` +
+                  `<p style="margin:0;">${translateEmail(emailTemplate.closing, {})}</p>`
               });
             }
 
@@ -1470,7 +1617,8 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
       endDate,
       pricePerNight,
       notes,
-      userId
+      userId,
+      language
     } = req.body as {
       firstName?: string;
       lastName?: string;
@@ -1483,6 +1631,7 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
       pricePerNight?: number;
       notes?: string;
       userId?: number;
+      language?: 'en' | 'bg';
     };
 
     // Email is required; phone is optional
@@ -1540,7 +1689,8 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
         roomPrice: pricePerNight ?? null,
         checkIn: start.toLocaleDateString(),
         checkOut: end.toLocaleDateString(),
-        bookingCode
+        bookingCode,
+        language: (language === 'bg' ? 'bg' : 'en')
       });
     } catch (mailError) {
       console.error('Failed to send reservation emails:', mailError);

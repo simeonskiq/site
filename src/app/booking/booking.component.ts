@@ -18,6 +18,7 @@ import { AuthService, User } from '../services/auth.service';
 import { AppCurrencyPipe } from '../pipes/app-currency.pipe';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { NotificationService } from '../services/notification.service';
+import { ConfirmDialogService } from '../notifications/confirm-dialog.service';
 
 interface Room {
   id: number;
@@ -171,7 +172,8 @@ export class BookingComponent implements OnInit, OnDestroy {
     private translationService: TranslationService,
     private languageService: LanguageService,
     private authService: AuthService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private confirmDialogService: ConfirmDialogService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.today.setHours(0, 0, 0, 0);
@@ -410,7 +412,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     return room?.images?.length || 0;
   }
 
-  confirmReservation() {
+  async confirmReservation() {
     // Email is required, phone is optional; names remain required
     if (!this.reservationData.name1 || !this.reservationData.name2 || !this.reservationData.email) {
       this.notificationService.warning('Missing details', 'Please fill in first name, last name, and email.', { persist: false });
@@ -422,6 +424,27 @@ export class BookingComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Show confirmation dialog
+    const confirmMessage = this.translationService.translate('bookingModal.confirmReservationMessage');
+    const confirmTitle = this.translationService.translate('bookingModal.confirmReservationTitle');
+    const confirmText = this.translationService.translate('bookingModal.confirmButton');
+    const cancelText = this.translationService.translate('bookingModal.cancel');
+
+    const confirmed = await this.confirmDialogService.confirm(confirmMessage, {
+      title: confirmTitle,
+      confirmText: confirmText,
+      cancelText: cancelText
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    // Proceed with reservation submission
+    this.submitReservation();
+  }
+
+  private submitReservation() {
     // Build payload and let backend handle emails + persistence
     const payload = {
       firstName: this.reservationData.name1,
@@ -435,7 +458,8 @@ export class BookingComponent implements OnInit, OnDestroy {
       endDate: this.checkoutDate?.toISOString().split('T')[0],
       pricePerNight: this.selectedRoom?.price,
       customerNote: this.reservationData.customerNote,
-      userId: this.currentUser?.id
+      userId: this.currentUser?.id,
+      language: this.currentLanguage // Add language preference
     };
 
     this.http.post<any>(`${environment.apiUrl}/api/public/reservations`, payload).subscribe({
