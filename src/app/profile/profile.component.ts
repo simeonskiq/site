@@ -5,11 +5,12 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
 import { AuthService, User } from '../services/auth.service';
+import { TranslatePipe } from '../pipes/translate.pipe';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
@@ -66,7 +67,7 @@ export class ProfileComponent implements OnInit {
       },
       error: (err) => {
         console.error(err);
-        this.error = 'Failed to load profile';
+        this.error = 'profile.failedToLoad';
         this.loading = false;
       }
     });
@@ -79,11 +80,11 @@ export class ProfileComponent implements OnInit {
       next: (user) => {
         this.user = user;
         this.authService.updateStoredUser(user);
-        this.successMessage = 'Profile updated successfully';
+        this.successMessage = 'profile.updatedSuccessfully';
       },
       error: (err) => {
         console.error(err);
-        this.error = 'Failed to update profile';
+        this.error = 'profile.failedToUpdate';
       }
     });
   }
@@ -95,14 +96,14 @@ export class ProfileComponent implements OnInit {
       next: (user) => {
         this.user = user;
         this.authService.updateStoredUser(user);
-        this.emailSuccess = 'Email changed successfully.';
+        this.emailSuccess = 'profile.emailChangedSuccessfully';
       },
       error: (err) => {
         console.error(err);
         if (err.status === 409) {
-          this.emailError = 'An account with this email already exists. Please use a different email address.';
+          this.emailError = 'profile.emailExists';
         } else {
-          this.emailError = err.error?.error || 'Failed to update email';
+          this.emailError = err.error?.error || 'profile.failedToUpdateEmail';
         }
       }
     });
@@ -118,13 +119,13 @@ export class ProfileComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.successMessage = res.message || 'Password updated successfully';
+          this.successMessage = res.message || 'profile.passwordUpdatedSuccessfully';
           this.passwordForm.currentPassword = '';
           this.passwordForm.newPassword = '';
         },
         error: (err) => {
           console.error(err);
-          this.error = err.error?.error || 'Failed to update password';
+          this.error = err.error?.error || 'profile.failedToUpdatePassword';
         }
       });
   }

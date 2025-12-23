@@ -224,6 +224,76 @@ export class TranslationService {
       en: 'Created:',
       bg: 'Създадена:'
     },
+    'reservations.completedAt': {
+      en: 'Completed At:',
+      bg: 'Завършена на:'
+    },
+
+    // Booking (reservation modal) - keep separate from booking page keys
+    'bookingModal.reserve': {
+      en: 'Reserve',
+      bg: 'Резервирай'
+    },
+    'bookingModal.firstName': {
+      en: 'First Name:',
+      bg: 'Име:'
+    },
+    'bookingModal.firstNamePlaceholder': {
+      en: 'Enter first name',
+      bg: 'Въведете име'
+    },
+    'bookingModal.lastName': {
+      en: 'Last Name:',
+      bg: 'Фамилия:'
+    },
+    'bookingModal.lastNamePlaceholder': {
+      en: 'Enter last name',
+      bg: 'Въведете фамилия'
+    },
+    'bookingModal.phone': {
+      en: 'Phone Number:',
+      bg: 'Телефон:'
+    },
+    'bookingModal.phonePlaceholder': {
+      en: 'Enter phone number',
+      bg: 'Въведете телефон'
+    },
+    'bookingModal.email': {
+      en: 'Email Address:',
+      bg: 'Имейл:'
+    },
+    'bookingModal.emailPlaceholder': {
+      en: 'Enter email address',
+      bg: 'Въведете имейл'
+    },
+    'bookingModal.emailReadonlyHint': {
+      en: 'Email comes from your profile and cannot be changed here. To update it, change your email in your account settings.',
+      bg: 'Имейлът идва от профила ви и не може да се променя тук. За да го обновите, сменете имейла в настройките на акаунта.'
+    },
+    'bookingModal.noteLabel': {
+      en: 'Note / Special requests (optional):',
+      bg: 'Бележка / Специални изисквания (по желание):'
+    },
+    'bookingModal.notePlaceholder': {
+      en: 'Anything we should know? (e.g. late check-in)',
+      bg: 'Имате ли изисквания? (напр. късно настаняване)'
+    },
+    'bookingModal.checkInLabel': {
+      en: 'Check-in:',
+      bg: 'Настаняване:'
+    },
+    'bookingModal.checkOutLabel': {
+      en: 'Check-out:',
+      bg: 'Освобождаване:'
+    },
+    'bookingModal.confirmReservation': {
+      en: 'Confirm Reservation',
+      bg: 'Потвърди резервация'
+    },
+    'bookingModal.cancel': {
+      en: 'Cancel',
+      bg: 'Отказ'
+    },
     'reservations.cancel': {
       en: 'Cancel Reservation',
       bg: 'Отмени резервация'

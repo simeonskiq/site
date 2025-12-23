@@ -43,9 +43,14 @@ async function sendReservationEmails(options: {
   guestName: string;
   guestPhone?: string | null;
   roomName: string;
+  roomImage?: string | null;
   roomPrice?: number | null;
+  nights?: number | null;
+  totalPrice?: number | null;
   checkIn: string;
   checkOut: string;
+  customerNote?: string | null;
+  confirmationNumber?: string | null;
 }) {
   if (!mailTransporter) {
     throw new Error('Email not configured: set SMTP_USER and SMTP_PASS (and SMTP_HOST/SMTP_PORT if not using Gmail).');
@@ -54,9 +59,135 @@ async function sendReservationEmails(options: {
     throw new Error('Email not configured: set HOTEL_EMAIL (or SMTP_USER).');
   }
 
-  const { guestEmail, guestName, guestPhone, roomName, roomPrice, checkIn, checkOut } = options;
+  const {
+    guestEmail,
+    guestName,
+    guestPhone,
+    roomName,
+    roomImage,
+    roomPrice,
+    nights,
+    totalPrice,
+    checkIn,
+    checkOut,
+    customerNote,
+    confirmationNumber
+  } = options;
 
   const subject = `Reservation request for ${roomName} (${checkIn} - ${checkOut})`;
+
+  const baseUrl =
+    process.env['PUBLIC_SITE_URL'] ||
+    (process.env['VERCEL_URL'] ? `https://${process.env['VERCEL_URL']}` : '');
+
+  const normalizeImageUrl = (input?: string | null): string | null => {
+    if (!input) return null;
+    // Convert ../../images/... -> /images/...
+    const idx = input.indexOf('/images/');
+    if (idx >= 0) input = input.slice(idx);
+    if (input.startsWith('../../images/')) input = input.replace('../../images/', '/images/');
+    if (input.startsWith('../images/')) input = input.replace('../images/', '/images/');
+    // If already absolute URL, keep it.
+    if (/^https?:\/\//i.test(input)) return input;
+    // If we have a base URL, make it absolute (best for email clients).
+    if (baseUrl && input.startsWith('/')) return `${baseUrl}${input}`;
+    return input;
+  };
+
+  const brandLogo = normalizeImageUrl('/images/hotel-logo.png');
+  const heroImage = normalizeImageUrl(roomImage) || brandLogo;
+  const amount =
+    typeof totalPrice === 'number'
+      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalPrice)
+      : (roomPrice != null && nights != null && nights > 0)
+        ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(roomPrice * nights)
+        : 'N/A';
+
+  const conf = confirmationNumber || '—';
+  const noteText = (customerNote || '').trim();
+
+  const htmlGuest = `
+  <div style="margin:0;padding:0;background:#f6f7fb;">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+      <tr>
+        <td align="center" style="padding:24px 16px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="max-width:640px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
+            <tr>
+              <td style="padding:20px 22px;border-bottom:1px solid #eef2f7;">
+                <table role="presentation" width="100%" style="border-collapse:collapse;">
+                  <tr>
+                    <td>
+                      ${brandLogo ? `<img src="${brandLogo}" alt="Aurora Hotel" height="42" style="display:block;border:0;outline:none;">` : `<div style="font-weight:800;font-size:18px;">Aurora Hotel</div>`}
+                    </td>
+                    <td align="right" style="color:#6b7280;font-size:12px;">
+                      Confirmation: <span style="font-weight:700;color:#d97706;">${conf}</span>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:18px 22px 6px 22px;">
+                <div style="font-size:16px;color:#111827;">Hey, ${guestName}</div>
+                <div style="font-size:34px;line-height:38px;font-weight:900;color:#111827;margin:8px 0 0 0;">Your reservation request is received!</div>
+                <div style="color:#6b7280;font-size:14px;margin-top:10px;">
+                  We will review it and contact you shortly to confirm availability.
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:14px 22px 0 22px;">
+                ${heroImage ? `<img src="${heroImage}" alt="${roomName}" style="width:100%;max-width:596px;border-radius:12px;display:block;border:0;outline:none;">` : ''}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:18px 22px;">
+                <table role="presentation" width="100%" style="border-collapse:collapse;">
+                  <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">${roomName}</td>
+                    <td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">${amount}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 0;color:#6b7280;font-size:12px;">Check-in</td>
+                    <td style="padding:12px 0;color:#6b7280;font-size:12px;">Check-out</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:0 0 12px 0;color:#111827;font-size:14px;font-weight:700;">${checkIn}</td>
+                    <td style="padding:0 0 12px 0;color:#111827;font-size:14px;font-weight:700;">${checkOut}</td>
+                  </tr>
+                </table>
+
+                <table role="presentation" width="100%" style="border-collapse:collapse;margin-top:10px;">
+                  <tr>
+                    <td style="padding:12px 0;border-top:1px solid #eef2f7;color:#111827;font-weight:800;">Special Requests</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 0 0 0;color:#374151;font-size:14px;line-height:20px;">
+                      ${noteText ? noteText.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '<span style="color:#9ca3af;">None</span>'}
+                    </td>
+                  </tr>
+                </table>
+
+                <div style="margin-top:18px;color:#6b7280;font-size:12px;line-height:18px;">
+                  If you have questions, reply to this email.
+                </div>
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding:16px 22px;background:#0f172a;color:#cbd5e1;font-size:12px;">
+                Aurora Hotel • ${HOTEL_EMAIL}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+  `.trim();
 
   // Email to guest
   await mailTransporter.sendMail({
@@ -68,11 +199,7 @@ async function sendReservationEmails(options: {
       `We have received your reservation request for ${roomName} from ${checkIn} to ${checkOut}.\n` +
       `We will contact you shortly to confirm availability.\n\n` +
       `Best regards,\nAurora Hotel`,
-    html:
-      `<p>Dear ${guestName},</p>` +
-      `<p>We have received your reservation request for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong>.</p>` +
-      `<p>We will contact you shortly to confirm availability.</p>` +
-      `<p>Best regards,<br/>Aurora Hotel</p>`
+    html: htmlGuest
   });
 
   // Email to hotel
@@ -88,7 +215,8 @@ async function sendReservationEmails(options: {
       `Room: ${roomName}\n` +
       `Price per night: ${roomPrice ?? 'N/A'}\n` +
       `Check-in: ${checkIn}\n` +
-      `Check-out: ${checkOut}\n`
+      `Check-out: ${checkOut}\n` +
+      (noteText ? `\nSpecial Requests: ${noteText}\n` : '')
   });
 }
 
@@ -926,10 +1054,12 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
       phone,
       roomId,
       roomName,
+      roomImage,
       startDate,
       endDate,
       pricePerNight,
       notes,
+      customerNote,
       userId
     } = req.body as {
       firstName?: string;
@@ -938,10 +1068,12 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
       phone?: string;
       roomId?: number;
       roomName?: string;
+      roomImage?: string;
       startDate?: string;
       endDate?: string;
       pricePerNight?: number;
       notes?: string;
+      customerNote?: string;
       userId?: number;
     };
 
@@ -964,6 +1096,9 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
     const totalPrice =
       pricePerNight && nights > 0 ? pricePerNight * nights : null;
 
+    // Backwards compatible: if old clients send "notes", keep it; prefer customerNote for new UI.
+    const finalNote = (typeof customerNote === 'string' ? customerNote : notes) || null;
+
     const supabase = await getDbConnection();
     const { data: reservation, error: insertError } = await supabase
       .from('reservations')
@@ -978,7 +1113,7 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
         guest_last_name: lastName,
         guest_email: email,
         guest_phone: phone || null,
-        notes: notes || null
+        notes: finalNote
       })
       .select()
       .single();
@@ -996,9 +1131,14 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
         guestName: `${firstName} ${lastName}`,
         guestPhone: phone || null,
         roomName: roomName || 'Room',
+        roomImage: roomImage || null,
         roomPrice: pricePerNight ?? null,
+        nights,
+        totalPrice,
         checkIn,
-        checkOut
+        checkOut,
+        customerNote: finalNote,
+        confirmationNumber: reservation?.id ? `R-${reservation.id}` : null
       });
     } catch (mailError) {
       console.error('Failed to send reservation emails:', mailError);

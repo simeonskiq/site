@@ -9,11 +9,12 @@ import { WebSocketService } from '../services/websocket.service';
 import { TranslationService } from '../services/translation.service';
 import { LanguageService } from '../services/language.service';
 import { Subscription } from 'rxjs';
+import { AppCurrencyPipe } from '../pipes/app-currency.pipe';
 
 @Component({
   selector: 'app-my-reservations',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AppCurrencyPipe],
   templateUrl: './my-reservations.component.html',
   styleUrls: ['./my-reservations.component.css']
 })
@@ -80,7 +81,7 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
       checkout: this.translationService.translate('reservations.checkout'),
       totalPrice: this.translationService.translate('reservations.totalPrice'),
       created: this.translationService.translate('reservations.created'),
-      completed: this.translationService.translate('reservations.completed'),
+      completedAt: this.translationService.translate('reservations.completedAt'),
       cancel: this.translationService.translate('reservations.cancel'),
       cannotCancel: this.translationService.translate('reservations.cannotCancel'),
       canceledBy: this.translationService.translate('reservations.canceledBy'),

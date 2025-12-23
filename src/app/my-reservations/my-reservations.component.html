@@ -35,8 +35,8 @@
         <p class="status">{{ translations.status || 'Status:' }} <span class="badge" [class.badge-approved]="r.Status === 'Approved'" [class.badge-pending]="r.Status === 'Pending'">{{ r.Status }}</span></p>
         <p>{{ translations.checkin || 'Check-in:' }} {{ r.StartDate | date }}</p>
         <p>{{ translations.checkout || 'Check-out:' }} {{ r.EndDate | date }}</p>
-        <p *ngIf="r.TotalPrice">{{ translations.totalPrice || 'Total price:' }} {{ r.TotalPrice | currency }}</p>
-        <p *ngIf="r.CompletedAt" class="meta-info completed-info">{{ translations.completed || 'Completed:' }} {{ r.CompletedAt | date:'short' }}</p>
+        <p *ngIf="r.TotalPrice">{{ translations.totalPrice || 'Total price:' }} {{ r.TotalPrice | appCurrency }}</p>
+        <p *ngIf="r.CompletedAt" class="meta-info completed-info">{{ translations.completedAt || 'Completed At:' }} {{ r.CompletedAt | date:'short' }}</p>
         <p *ngIf="r.CreatedAt" class="meta-info">{{ translations.created || 'Created:' }} {{ r.CreatedAt | date:'short' }}</p>
         <button 
           *ngIf="canCancel(r)" 
@@ -104,8 +104,8 @@
         </p>
         <p>{{ translations.checkin || 'Check-in:' }} {{ r.StartDate | date }}</p>
         <p>{{ translations.checkout || 'Check-out:' }} {{ r.EndDate | date }}</p>
-        <p *ngIf="r.TotalPrice">{{ translations.totalPrice || 'Total price:' }} {{ r.TotalPrice | currency }}</p>
-        <p *ngIf="r.CompletedAt" class="meta-info completed-info">{{ translations.completed || 'Completed:' }} {{ r.CompletedAt | date:'short' }}</p>
+        <p *ngIf="r.TotalPrice">{{ translations.totalPrice || 'Total price:' }} {{ r.TotalPrice | appCurrency }}</p>
+        <p *ngIf="r.CompletedAt" class="meta-info completed-info">{{ translations.completedAt || 'Completed At:' }} {{ r.CompletedAt | date:'short' }}</p>
         <p *ngIf="r.CreatedAt" class="meta-info">{{ translations.created || 'Created:' }} {{ r.CreatedAt | date:'short' }}</p>
         <p *ngIf="r.CanceledAt" class="meta-info canceled-info">
           {{ translations.canceled || 'Canceled:' }} {{ r.CanceledAt | date:'short' }}

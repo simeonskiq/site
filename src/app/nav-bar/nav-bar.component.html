@@ -32,16 +32,16 @@
             <span class="caret">▼</span>
           </button>
           <div class="user-dropdown" *ngIf="showUserMenu">
-            <button *ngIf="isAdmin" class="dropdown-item" type="button" routerLink="/admin">
+            <button *ngIf="isAdmin" class="dropdown-item" type="button" routerLink="/admin" (click)="closeUserMenu()">
               Admin Panel
             </button>
-            <button class="dropdown-item" type="button" routerLink="/profile">
+            <button class="dropdown-item" type="button" routerLink="/profile" (click)="closeUserMenu()">
               My Profile
             </button>
-            <button class="dropdown-item" type="button" routerLink="/my-reservations">
+            <button class="dropdown-item" type="button" routerLink="/my-reservations" (click)="closeUserMenu()">
               My Reservations
             </button>
-            <button class="dropdown-item" type="button" (click)="logout()">
+            <button class="dropdown-item" type="button" (click)="logout(); closeUserMenu()">
               Logout
             </button>
           </div>

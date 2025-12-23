@@ -1,60 +1,60 @@
 <div class="profile-container">
-  <h1>My Profile</h1>
+  <h1>{{ 'profile.title' | translate }}</h1>
 
   <div *ngIf="error" class="error">
-    {{ error }}
+    {{ error | translate }}
   </div>
   <div *ngIf="successMessage" class="success">
-    {{ successMessage }}
+    {{ successMessage | translate }}
   </div>
 
-  <div *ngIf="loading">Loading profile...</div>
+  <div *ngIf="loading">{{ 'profile.loading' | translate }}</div>
 
   <div *ngIf="!loading && user" class="sections">
     <section class="section">
-      <h2>Personal Information</h2>
+      <h2>{{ 'profile.personalInformation' | translate }}</h2>
       <form (ngSubmit)="saveProfile()">
         <div class="form-group">
-          <label>First Name</label>
+          <label>{{ 'profile.firstName' | translate }}</label>
           <input type="text" [(ngModel)]="profileForm.firstName" name="firstName" />
         </div>
         <div class="form-group">
-          <label>Last Name</label>
+          <label>{{ 'profile.lastName' | translate }}</label>
           <input type="text" [(ngModel)]="profileForm.lastName" name="lastName" />
         </div>
         <div class="form-group">
-          <label>Phone</label>
+          <label>{{ 'profile.phone' | translate }}</label>
           <input type="tel" [(ngModel)]="profileForm.phone" name="phone" />
         </div>
-        <button type="button" class="btn btn-primary" (click)="saveProfile()">Save</button>
+        <button type="button" class="btn btn-primary" (click)="saveProfile()">{{ 'profile.save' | translate }}</button>
       </form>
     </section>
 
     <section class="section">
-      <h2>Email</h2>
+      <h2>{{ 'profile.email' | translate }}</h2>
       <form (ngSubmit)="saveEmail()">
         <div class="form-group">
-          <label>Email</label>
+          <label>{{ 'profile.email' | translate }}</label>
           <input type="email" [(ngModel)]="emailForm.email" name="email" required />
         </div>
         <p class="hint">
-          This email will be used for reservations and login.
+          {{ 'profile.emailHint' | translate }}
         </p>
         <div *ngIf="emailError" class="error">
-          {{ emailError }}
+          {{ emailError | translate }}
         </div>
         <div *ngIf="emailSuccess" class="success">
-          {{ emailSuccess }}
+          {{ emailSuccess | translate }}
         </div>
-        <button type="button" class="btn btn-primary" (click)="saveEmail()">Change Email</button>
+        <button type="button" class="btn btn-primary" (click)="saveEmail()">{{ 'profile.changeEmail' | translate }}</button>
       </form>
     </section>
 
     <section class="section">
-      <h2>Password</h2>
+      <h2>{{ 'profile.password' | translate }}</h2>
       <form (ngSubmit)="savePassword()">
         <div class="form-group">
-          <label>Current Password</label>
+          <label>{{ 'profile.currentPassword' | translate }}</label>
           <input
             type="password"
             [(ngModel)]="passwordForm.currentPassword"
@@ -63,7 +63,7 @@
           />
         </div>
         <div class="form-group">
-          <label>New Password</label>
+          <label>{{ 'profile.newPassword' | translate }}</label>
           <input
             type="password"
             [(ngModel)]="passwordForm.newPassword"
@@ -71,7 +71,7 @@
             required
           />
         </div>
-        <button type="button" class="btn btn-primary" (click)="savePassword()">Change Password</button>
+        <button type="button" class="btn btn-primary" (click)="savePassword()">{{ 'profile.changePassword' | translate }}</button>
       </form>
     </section>
   </div>

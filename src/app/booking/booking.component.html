@@ -51,8 +51,8 @@
             <div class="room-feature"><i class="fas fa-bath"></i> {{ room.bathrooms }} bathroom{{ room.bathrooms > 1 ? 's' : '' }}</div>
           </div>
           <div class="room-price">
-            <span class="price-amount">${{ room.price }}</span>
-            <span class="price-period">per night</span>
+            <span class="price-amount">{{ room.price | appCurrency }}</span>
+            <span class="price-period">{{ currentLanguage === 'bg' ? 'на нощ' : 'per night' }}</span>
           </div>
           <div class="room-actions">
             <button class="btn-reserve" (click)="selectRoom(room)">
@@ -78,43 +78,53 @@
     <div class="modal-content">
       <div class="reservation-form">
         <div class="form-header">
-          <h3>Reserve {{selectedRoom.title}}</h3>
+          <h3>{{ 'bookingModal.reserve' | translate }} {{ selectedRoom.title }}</h3>
           <button class="close-button" (click)="showReservationForm = false">&times;</button>
         </div>
         <div class="form-group">
-          <label for="firstName">First Name:</label>
-          <input type="text" id="firstName" [(ngModel)]="reservationData.name1" class="form-control" required placeholder="Enter first name">
+          <label for="firstName">{{ 'bookingModal.firstName' | translate }}</label>
+          <input type="text" id="firstName" [(ngModel)]="reservationData.name1" class="form-control" required [placeholder]="'bookingModal.firstNamePlaceholder' | translate">
         </div>
         <div class="form-group">
-          <label for="lastName">Last Name:</label>
-          <input type="text" id="lastName" [(ngModel)]="reservationData.name2" class="form-control" required placeholder="Enter last name">
+          <label for="lastName">{{ 'bookingModal.lastName' | translate }}</label>
+          <input type="text" id="lastName" [(ngModel)]="reservationData.name2" class="form-control" required [placeholder]="'bookingModal.lastNamePlaceholder' | translate">
         </div>
         <div class="form-group">
-          <label for="phone">Phone Number:</label>
-          <input type="tel" id="phone" [(ngModel)]="reservationData.phone" class="form-control" required placeholder="Enter phone number">
+          <label for="phone">{{ 'bookingModal.phone' | translate }}</label>
+          <input type="tel" id="phone" [(ngModel)]="reservationData.phone" class="form-control" required [placeholder]="'bookingModal.phonePlaceholder' | translate">
         </div>
         <div class="form-group">
-          <label for="email">Email Address:</label>
+          <label for="email">{{ 'bookingModal.email' | translate }}</label>
           <input
             type="email"
             id="email"
             [(ngModel)]="reservationData.email"
             class="form-control"
             required
-            placeholder="Enter email address"
+            [placeholder]="'bookingModal.emailPlaceholder' | translate"
             [readonly]="!!currentUser"
           >
           <small class="hint" *ngIf="currentUser">
-            Email comes from your profile and cannot be changed here. To update it, change your email in your account settings.
+            {{ 'bookingModal.emailReadonlyHint' | translate }}
           </small>
         </div>
+        <div class="form-group">
+          <label for="customerNote">{{ 'bookingModal.noteLabel' | translate }}</label>
+          <textarea
+            id="customerNote"
+            [(ngModel)]="reservationData.customerNote"
+            class="form-control"
+            rows="3"
+            [placeholder]="'bookingModal.notePlaceholder' | translate"
+          ></textarea>
+        </div>
         <div class="booking-summary">
-          <p>Check-in: {{checkinDate | date}}</p>
-          <p>Check-out: {{checkoutDate | date}}</p>
+          <p>{{ 'bookingModal.checkInLabel' | translate }} {{ checkinDate | date }}</p>
+          <p>{{ 'bookingModal.checkOutLabel' | translate }} {{ checkoutDate | date }}</p>
         </div>
         <div class="form-buttons">
-          <button (click)="confirmReservation()" class="btn btn-primary">Confirm Reservation</button>
-          <button (click)="showReservationForm = false" class="btn btn-secondary">Cancel</button>
+          <button (click)="confirmReservation()" class="btn btn-primary">{{ 'bookingModal.confirmReservation' | translate }}</button>
+          <button (click)="showReservationForm = false" class="btn btn-secondary">{{ 'bookingModal.cancel' | translate }}</button>
         </div>
       </div>
     </div>

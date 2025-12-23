@@ -1,14 +1,51 @@
+/* Match site theme (same background + overlay used across pages like Booking) */
+:host {
+  display: block;
+  min-height: 100vh;
+  position: relative;
+}
+
+:host::before,
+:host::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+}
+
+:host::before {
+  background-image: url('../../images/hotel/hotel-4.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+:host::after {
+  background: rgba(0, 0, 0, 0.4);
+  z-index: -1;
+}
+
 .my-res-container {
   min-height: 100vh;
   padding: 100px 2rem 80px;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
   color: #f9fafb;
+  position: relative;
+  z-index: 1;
 }
 
 .my-res-container h1 {
-  font-size: 2rem;
-  margin-bottom: 1.5rem;
+  font-size: 2.6rem;
+  margin-bottom: 1.75rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 50%, #c7d2fe 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  font-family: 'Playfair Display', serif;
 }
 
 .cards {
@@ -34,7 +71,8 @@
 .badge {
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(199, 210, 254, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .error {
@@ -87,7 +125,7 @@
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
-  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.18);
 }
 
 .tab-btn {
@@ -104,12 +142,12 @@
 
 .tab-btn:hover {
   color: #f9fafb;
-  border-bottom-color: rgba(59, 130, 246, 0.5);
+  border-bottom-color: rgba(255, 255, 255, 0.5);
 }
 
 .tab-btn.active {
-  color: #60a5fa;
-  border-bottom-color: #60a5fa;
+  color: #e0e7ff;
+  border-bottom-color: #c7d2fe;
   font-weight: 500;
 }
 

@@ -95,6 +95,10 @@ export class NavBarComponent implements OnInit, OnDestroy {
     this.showUserMenu = !this.showUserMenu;
   }
 
+  closeUserMenu(): void {
+    this.showUserMenu = false;
+  }
+
   toggleMobileMenu(): void {
     this.showMobileMenu = !this.showMobileMenu;
   }

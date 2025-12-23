@@ -15,6 +15,8 @@ import { LanguageService } from '../services/language.service';
 import { Subscription } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService, User } from '../services/auth.service';
+import { AppCurrencyPipe } from '../pipes/app-currency.pipe';
+import { TranslatePipe } from '../pipes/translate.pipe';
 
 interface Room {
   id: number;
@@ -47,7 +49,9 @@ interface Service {
     MatInputModule,
     MatFormFieldModule,
     MatButtonModule,
-    MatNativeDateModule
+    MatNativeDateModule,
+    AppCurrencyPipe,
+    TranslatePipe
   ]
 })
 export class BookingComponent implements OnInit, OnDestroy {
@@ -67,6 +71,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     name2: '',
     phone: '',
     email: '',
+    customerNote: '',
     checkinDate: null as Date | null,
     checkoutDate: null as Date | null
   };
@@ -411,23 +416,6 @@ export class BookingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Format the room description for email - updated formatting logic
-    const formattedDescription = this.getRoomDetailedDescription(this.selectedRoom)
-      .split('<br><br>')
-      .map(section => {
-        if (section.includes('✔')) {
-          // Handle the features list
-          return section
-            .split('<br>')
-            .filter(line => line.trim())
-            .map(line => line.replace('✔ ', ''))
-            .join('<br>');
-        }
-        // Handle the main description
-        return `<p>${section.trim()}</p>`;
-      })
-      .join('');
-
     // Build payload and let backend handle emails + persistence
     const payload = {
       firstName: this.reservationData.name1,
@@ -436,11 +424,11 @@ export class BookingComponent implements OnInit, OnDestroy {
       phone: this.reservationData.phone,
       roomId: this.selectedRoom?.id,
       roomName: this.selectedRoom?.name,
+      roomImage: this.selectedRoom?.image,
       startDate: this.checkinDate?.toISOString().split('T')[0],
       endDate: this.checkoutDate?.toISOString().split('T')[0],
       pricePerNight: this.selectedRoom?.price,
-      // Optional: send formatted description so backend can include it in emails later if needed
-      notes: formattedDescription,
+      customerNote: this.reservationData.customerNote,
       userId: this.currentUser?.id
     };
 
@@ -467,6 +455,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       name2: '',
       phone: '',
       email: '',
+      customerNote: '',
       checkinDate: null,
       checkoutDate: null
     };
