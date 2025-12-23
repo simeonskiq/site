@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Subject, Subscription, interval, startWith, switchMap, catchError, of } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { AuthService, User } from './auth.service';
 
 export interface ReservationStatusUpdate {
   reservationId: number;
@@ -25,7 +26,8 @@ export class WebSocketService {
   private reservationUpdateSubject = new Subject<ReservationStatusUpdate>();
   private roomUpdateSubject = new Subject<RoomStatusUpdate>();
   private isBrowser: boolean;
-  private sub = new Subscription();
+  private pollSub = new Subscription();
+  private authSub = new Subscription();
 
   private lastReservationsById = new Map<number, any>();
   private lastRoomsById = new Map<number, any>();
@@ -35,23 +37,42 @@ export class WebSocketService {
 
   constructor(
     private http: HttpClient,
+    private authService: AuthService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
     
     if (this.isBrowser) {
       if (environment.enableWebsocket !== false) {
-        this.startPolling();
+        // Start/stop polling based on auth state to avoid hitting admin endpoints as a normal user.
+        this.authSub.add(
+          this.authService.currentUser$.subscribe((user) => {
+            this.configurePolling(user);
+          })
+        );
       }
     }
   }
 
-  private startPolling(): void {
+  private configurePolling(user: User | null): void {
+    // Reset all polling on auth changes (login/logout/role change)
+    this.pollSub.unsubscribe();
+    this.pollSub = new Subscription();
+
+    this.lastReservationsById.clear();
+    this.lastRoomsById.clear();
+
+    // If not logged in, don't poll anything (prevents 401 spam on refresh)
+    if (!user || !this.authService.isAuthenticated()) return;
+
+    const role = user.role ?? 'User';
+    const isAdmin = role !== 'User';
+
     // Poll fairly frequently, but keep it light to avoid hammering Vercel/Supabase.
     const pollMs = 8000;
 
-    // Reservations (user or admin depending on permissions; 401/403 are ignored)
-    this.sub.add(
+    // User reservations
+    this.pollSub.add(
       interval(pollMs)
         .pipe(
           startWith(0),
@@ -67,8 +88,10 @@ export class WebSocketService {
         })
     );
 
-    // Admin reservations (if authorized; 401/403 are ignored)
-    this.sub.add(
+    if (!isAdmin) return;
+
+    // Admin reservations
+    this.pollSub.add(
       interval(pollMs)
         .pipe(
           startWith(0),
@@ -84,8 +107,8 @@ export class WebSocketService {
         })
     );
 
-    // Rooms (admin; 401/403 are ignored)
-    this.sub.add(
+    // Rooms (admin)
+    this.pollSub.add(
       interval(pollMs)
         .pipe(
           startWith(0),
@@ -155,7 +178,8 @@ export class WebSocketService {
   }
 
   disconnect(): void {
-    this.sub.unsubscribe();
+    this.pollSub.unsubscribe();
+    this.authSub.unsubscribe();
   }
 
   isConnected(): boolean {

@@ -1,4 +1,3 @@
-import { CurrencyPipe } from '@angular/common';
 import { ChangeDetectorRef, OnDestroy, Pipe, PipeTransform } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { LanguageService } from '../services/language.service';
@@ -14,7 +13,6 @@ export class AppCurrencyPipe implements PipeTransform, OnDestroy {
   private sub: Subscription;
 
   constructor(
-    private currencyPipe: CurrencyPipe,
     private languageService: LanguageService,
     private cdr: ChangeDetectorRef
   ) {
@@ -29,7 +27,31 @@ export class AppCurrencyPipe implements PipeTransform, OnDestroy {
     digitsInfo?: string
   ): string | null {
     const currencyCode = this.lang === 'bg' ? 'BGN' : 'USD';
-    return this.currencyPipe.transform(value, currencyCode, 'symbol', digitsInfo);
+    const n =
+      typeof value === 'number'
+        ? value
+        : typeof value === 'string'
+          ? Number(value)
+          : NaN;
+    if (!Number.isFinite(n)) return null;
+
+    // digitsInfo example: "1.0-0" => min 0, max 0
+    let minFrac = 0;
+    let maxFrac = 0;
+    if (digitsInfo) {
+      const m = digitsInfo.match(/^\d+\.(\d+)-(\d+)$/);
+      if (m) {
+        minFrac = Number(m[1]);
+        maxFrac = Number(m[2]);
+      }
+    }
+
+    return new Intl.NumberFormat(this.lang === 'bg' ? 'bg-BG' : 'en-US', {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits: minFrac,
+      maximumFractionDigits: maxFrac
+    }).format(n);
   }
 
   ngOnDestroy(): void {

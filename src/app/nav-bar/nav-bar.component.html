@@ -33,16 +33,16 @@
           </button>
           <div class="user-dropdown" *ngIf="showUserMenu">
             <button *ngIf="isAdmin" class="dropdown-item" type="button" routerLink="/admin" (click)="closeUserMenu()">
-              Admin Panel
+              {{ 'nav.adminPanel' | translate }}
             </button>
             <button class="dropdown-item" type="button" routerLink="/profile" (click)="closeUserMenu()">
-              My Profile
+              {{ 'nav.myProfile' | translate }}
             </button>
             <button class="dropdown-item" type="button" routerLink="/my-reservations" (click)="closeUserMenu()">
-              My Reservations
+              {{ 'nav.myReservations' | translate }}
             </button>
             <button class="dropdown-item" type="button" (click)="logout(); closeUserMenu()">
-              Logout
+              {{ 'nav.logout' | translate }}
             </button>
           </div>
         </div>
@@ -94,16 +94,16 @@
       
       <ng-container *ngIf="isBrowser && isAuthenticated">
         <button *ngIf="isAdmin" class="mobile-menu-item" type="button" routerLink="/admin" (click)="closeMobileMenu()">
-          Admin Panel
+          {{ 'nav.adminPanel' | translate }}
         </button>
         <button class="mobile-menu-item" type="button" routerLink="/profile" (click)="closeMobileMenu()">
-          My Profile
+          {{ 'nav.myProfile' | translate }}
         </button>
         <button class="mobile-menu-item" type="button" routerLink="/my-reservations" (click)="closeMobileMenu()">
-          My Reservations
+          {{ 'nav.myReservations' | translate }}
         </button>
         <button class="mobile-menu-item mobile-menu-logout" type="button" (click)="logout(); closeMobileMenu()">
-          Logout
+          {{ 'nav.logout' | translate }}
         </button>
       </ng-container>
       
