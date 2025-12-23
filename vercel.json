@@ -7,10 +7,5 @@
       "source": "/((?!api/).*)",
       "destination": "/"
     }
-  ],
-  "functions": {
-    "dist/site/server/server.mjs": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  ]
 }
