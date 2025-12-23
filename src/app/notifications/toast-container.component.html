@@ -1,0 +1,11 @@
+<div class="toast-stack" aria-live="polite" aria-atomic="true">
+  <div class="toast" *ngFor="let t of toasts" [class]="t.level">
+    <div class="toast-body">
+      <div class="toast-title">{{ t.title }}</div>
+      <div class="toast-message">{{ t.message }}</div>
+    </div>
+    <button type="button" class="toast-close" (click)="dismiss(t.id)" aria-label="Dismiss">×</button>
+  </div>
+</div>
+
+

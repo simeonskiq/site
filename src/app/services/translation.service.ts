@@ -51,8 +51,8 @@ export class TranslationService {
       bg: 'История на резервациите'
     },
     'admin.id': {
-      en: 'ID',
-      bg: 'ID'
+      en: 'Booking ID',
+      bg: 'Номер резервация'
     },
     'admin.user': {
       en: 'User',
@@ -481,6 +481,74 @@ export class TranslationService {
     'booking.perNight': {
       en: 'per night',
       bg: 'на нощ'
+    },
+    'booking.guests': {
+      en: 'guests',
+      bg: 'гости'
+    },
+    'booking.bathroom': {
+      en: 'bathroom',
+      bg: 'баня'
+    },
+    'booking.bathrooms': {
+      en: 'bathrooms',
+      bg: 'бани'
+    },
+    'booking.reserveNow': {
+      en: 'Reserve Now',
+      bg: 'Резервирай сега'
+    },
+    'booking.viewDetails': {
+      en: 'View Details',
+      bg: 'Виж детайли'
+    },
+    'booking.noRoomsTitle': {
+      en: 'No rooms available',
+      bg: 'Няма налични стаи'
+    },
+    'booking.noRoomsMessage': {
+      en: 'We\'re sorry, but there are no available rooms for the selected dates. Please try selecting different dates.',
+      bg: 'Съжаляваме, но няма налични стаи за избраните дати. Моля, опитайте да изберете различни дати.'
+    },
+    'booking.close': {
+      en: 'Close',
+      bg: 'Затвори'
+    },
+    'booking.roomDescription.apart1': {
+      en: 'Enjoy comfort and privacy in our One-Bedroom Apartment. The main bedroom features a comfortable double bed, and the living area is equipped with a pull-out sofa, suitable for additional guests. The apartment offers a fully equipped kitchenette where you can prepare your favorite meals, as well as a spacious terrace, ideal for morning coffee or evening relaxation. In addition, it has a private bathroom, air conditioning, TV and free Wi-Fi.',
+      bg: 'Насладете се на комфорт и уединение в нашия Апартамент с една спалня. Основната спалня разполага с удобно двойно легло, а дневната зона е оборудвана с разтегателен диван, подходящ за допълнителни гости. Апартаментът предлага напълно оборудван кухненски бокс, където можете да приготвяте любимите си ястия, както и просторна тераса, идеална за сутрешно кафе или вечерен релакс. Освен това, разполага със самостоятелна баня, климатик, телевизор и безплатен Wi-Fi.'
+    },
+    'booking.roomDescription.apart1.features': {
+      en: '✔ Bedroom with double bed<br>✔ Living area with pull-out sofa<br>✔ Spacious terrace with relaxation area<br>✔ Air conditioning and TV<br>✔ Kitchenette with oven, refrigerator and dining table<br>✔ Private bathroom with shower<br>✔ Free Wi-Fi',
+      bg: '✔ Спалня с двойно легло<br>✔ Дневна зона с разтегателен диван<br>✔ Просторна тераса с кът за отдих<br>✔ Климатик и телевизор<br>✔ Кухненски бокс с фурна, хладилник и трапезна маса<br>✔ Самостоятелна тоалетна и баня с душ<br>✔ Безплатен Wi-Fi'
+    },
+    'booking.roomDescription.apart2': {
+      en: 'If you\'re looking for space and comfort, this apartment is for you! It features a separate bedroom with a double bed and a living area with a pull-out sofa, where two more guests can stay overnight. Light enters through the large windows, and the terrace offers a wonderful place to relax with a view. The kitchenette is fully equipped with everything you might need, and the private bathroom is modernly furnished with a bathtub. The air conditioning, TV and free Wi-Fi will make your stay even more pleasant.',
+      bg: 'Ако търсите простор и удобство, този апартамент е за вас! Разполага с отделна спалня с двойно легло и дневна зона с разтегателен диван, където може да нощуват още двама гости. Светлината навлиза през големите прозорци, а терасата предлага чудесно място за отдих с изглед. Кухненският бокс е напълно оборудван с всичко от което бийте имали нужда, а самостоятелната баня е модерно обзавена с вана. Климатикът, телевизорът и безплатният Wi-Fi ще направят престоя ви още по-приятен.'
+    },
+    'booking.roomDescription.apart2.features': {
+      en: '✔ Bedroom with double bed<br>✔ Living area with pull-out sofa<br>✔ Spacious terrace with relaxation area<br>✔ Air conditioning and TV<br>✔ Kitchenette with oven, refrigerator and dining table<br>✔ Private bathroom with bathtub and shower<br>✔ Free Wi-Fi',
+      bg: '✔ Спалня с двойно легло<br>✔ Дневна зона с разтегателен диван<br>✔ Просторна тераса с кът за отдих<br>✔ Климатик и телевизор<br>✔ Кухненски бокс с фурна, хладилник и трапезна маса<br>✔ Самостоятелна тоалетна и баня с вана и душ<br>✔ Безплатен Wi-Fi'
+    },
+    'booking.roomDescription.apart3': {
+      en: 'Perfect for those seeking coziness and tranquility, this one-bedroom apartment combines comfort and functionality. The bedroom features a large double bed, and the living area offers a pull-out sofa, suitable for additional guests. In the apartment you will also find a kitchenette with all amenities, a private bathroom with bathtub and shower, and a wide terrace with a relaxation area. The air conditioning, TV and free Wi-Fi guarantee comfort and a pleasant atmosphere.',
+      bg: 'Перфектен за тези, които търсят уют и спокойствие, този апартамент с една спалня съчетава комфорт и функционалност. Спалнята разполага с голямо двойно легло, а дневната зона предлага разтегателен диван, подходящ за допълнителни гости. В апартамента ще откриете още кухненски бокс с всички удобства, самостоятелна баня с вана и душ, и широка тераса с кът за отдих. Климатиците, телевизорът и безплатният Wi-Fi гарантират удобство и приятна атмосфера.'
+    },
+    'booking.roomDescription.apart3.features': {
+      en: '✔ Bedroom with double bed<br>✔ Living area with pull-out sofa<br>✔ Spacious terrace with relaxation area<br>✔ Air conditioning and TV<br>✔ Kitchenette with oven, refrigerator and dining table<br>✔ Private bathroom with bathtub and shower<br>✔ Free Wi-Fi',
+      bg: '✔ Спалня с двойно легло<br>✔ Дневна зона с разтегателен диван<br>✔ Просторна тераса с кът за отдих<br>✔ Климатик и телевизор<br>✔ Кухненски бокс с фурна, хладилник и трапезна маса<br>✔ Самостоятелна тоалетна и баня с вана и душ<br>✔ Безплатен Wi-Fi'
+    },
+    'booking.roomDescription.studio': {
+      en: 'Our Studio offers coziness and comfort with modern interior and a terrace where you can enjoy your morning coffee or evening breeze. The main space includes a pull-out sofa, a fully equipped kitchenette with microwave, refrigerator and dining table. In the studio you will also find air conditioning, TV and free Wi-Fi for your convenience.',
+      bg: 'Нашето Студио предлага уют и удобство с модерен интериор и тераса, където можете да се насладите на сутрешното си кафе или вечерния бриз. Основното пространство включва разтегателен диван, напълно оборудван кухненски бокс с микроволнова, хладилник и трапезна маса. В студиото ще откриете още климатик, телевизор и безплатен Wi-Fi за вашето удобство.'
+    },
+    'booking.roomDescription.studio.features': {
+      en: '✔ Pull-out sofa for two<br>✔ Spacious terrace with relaxation area<br>✔ Private bathroom with shower<br>✔ Air conditioning and TV<br>✔ Kitchenette with microwave, refrigerator and dining table<br>✔ Free Wi-Fi',
+      bg: '✔ Разтегателен диван за двама<br>✔ Просторна тераса с кът за отдих<br>✔ Самостоятелна тоалетна и баня с душ<br>✔ Климатик и телевизор<br>✔ Кухненски бокс с микроволнова, хладилник и трапезна маса<br>✔ Безплатен Wi-Fi'
+    },
+    'booking.noDescription': {
+      en: 'No detailed description available for this room.',
+      bg: 'Няма налично подробно описание за тази стая.'
     },
     
     // Contact Component

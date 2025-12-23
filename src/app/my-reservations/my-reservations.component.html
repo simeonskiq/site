@@ -32,6 +32,7 @@
     <div *ngIf="!loading && activeReservations.length" class="cards">
       <div class="card" *ngFor="let r of activeReservations">
         <h2>{{ r.RoomName || 'Room #' + r.RoomId }}</h2>
+        <p class="meta-info">Booking ID: {{ formatBookingId(r) }}</p>
         <p class="status">{{ translations.status || 'Status:' }} <span class="badge" [class.badge-approved]="r.Status === 'Approved'" [class.badge-pending]="r.Status === 'Pending'">{{ r.Status }}</span></p>
         <p>{{ translations.checkin || 'Check-in:' }} {{ r.StartDate | date }}</p>
         <p>{{ translations.checkout || 'Check-out:' }} {{ r.EndDate | date }}</p>
@@ -91,6 +92,7 @@
     <div *ngIf="!loading && getFilteredHistory().length" class="cards">
       <div class="card" *ngFor="let r of getFilteredHistory()">
         <h2>{{ r.RoomName || 'Room #' + r.RoomId }}</h2>
+        <p class="meta-info">Booking ID: {{ formatBookingId(r) }}</p>
         <p class="status">
           {{ translations.status || 'Status:' }} <span class="badge" 
             [class.badge-canceled]="r.Status === 'Cancelled'"

@@ -16,6 +16,7 @@ import {
   listFiles,
   STORAGE_BUCKETS
 } from './supabase-storage.config';
+import { getPublicBaseUrl, normalizeImageUrl, renderBrandedEmail, escapeHtml } from './email-template';
 
 const app = express();
 const httpServer = createServer(app);
@@ -81,6 +82,7 @@ async function sendReservationEmails(options: {
   roomPrice?: number | null;
   checkIn: string;
   checkOut: string;
+  bookingCode?: string | null;
 }) {
   if (!mailTransporter) {
     throw new Error('Email not configured: set SMTP_USER and SMTP_PASS (and SMTP_HOST/SMTP_PORT if not using Gmail).');
@@ -93,22 +95,55 @@ async function sendReservationEmails(options: {
     roomName,
     roomPrice,
     checkIn,
-    checkOut
+    checkOut,
+    bookingCode
   } = options;
 
   const subject = `Reservation request for ${roomName} (${checkIn} - ${checkOut})`;
-  const textBody = `
-Reservation request
+  const baseUrl = getPublicBaseUrl();
+  const brandLogo = normalizeImageUrl('/images/hotel-logo.png', baseUrl);
+  const bookingIdText = bookingCode ? `Booking ID: ${bookingCode}\n\n` : '';
+  const textBody = (
+    `Reservation request\n\n` +
+    bookingIdText +
+    `Guest: ${guestName}\n` +
+    `Email: ${guestEmail}\n` +
+    `Phone: ${guestPhone || 'Not provided'}\n\n` +
+    `Room: ${roomName}\n` +
+    `Price per night: ${roomPrice ?? 'N/A'}\n` +
+    `Check-in: ${checkIn}\n` +
+    `Check-out: ${checkOut}\n`
+  ).trim();
 
-Guest: ${guestName}
-Email: ${guestEmail}
-Phone: ${guestPhone || 'Not provided'}
+  const htmlGuest = renderBrandedEmail({
+    title: 'Your reservation request is received!',
+    preheader: `Reservation request for ${roomName} (${checkIn} – ${checkOut})`,
+    bookingCode: bookingCode || null,
+    logoUrl: brandLogo,
+    footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+    bodyHtml:
+      `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(guestName)},</p>` +
+      `<p style="margin:0 0 12px 0;">We have received your reservation request for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong>.</p>` +
+      `<p style="margin:0 0 12px 0;">We will contact you shortly to confirm availability.</p>` +
+      `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+  });
 
-Room: ${roomName}
-Price per night: ${roomPrice ?? 'N/A'}
-Check-in: ${checkIn}
-Check-out: ${checkOut}
-`.trim();
+  const htmlStaff = renderBrandedEmail({
+    title: 'New reservation request',
+    preheader: `New reservation request for ${roomName}`,
+    bookingCode: bookingCode || null,
+    logoUrl: brandLogo,
+    footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+    bodyHtml:
+      `<table role="presentation" width="100%" style="border-collapse:collapse;margin-top:6px;">` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Guest</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestName)}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Email</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestEmail)}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Phone</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestPhone || 'Not provided')}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Room</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(roomName)}</td></tr>` +
+      `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Dates</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(checkIn)} – ${escapeHtml(checkOut)}</td></tr>` +
+      `<tr><td style="padding:10px 0;color:#111827;font-weight:800;">Price per night</td><td align="right" style="padding:10px 0;color:#111827;">${escapeHtml(String(roomPrice ?? 'N/A'))}</td></tr>` +
+      `</table>`
+  });
 
   // Email to guest
   await mailTransporter.sendMail({
@@ -120,11 +155,7 @@ Check-out: ${checkOut}
       `We have received your reservation request for ${roomName} from ${checkIn} to ${checkOut}.\n` +
       `We will contact you shortly to confirm availability.\n\n` +
       `Best regards,\nAurora Hotel`,
-    html:
-      `<p>Dear ${guestName},</p>` +
-      `<p>We have received your reservation request for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong>.</p>` +
-      `<p>We will contact you shortly to confirm availability.</p>` +
-      `<p>Best regards,<br/>Aurora Hotel</p>`
+    html: htmlGuest
   });
 
   // Email to hotel
@@ -132,7 +163,8 @@ Check-out: ${checkOut}
     from: `"Aurora Hotel Website" <${HOTEL_EMAIL}>`,
     to: HOTEL_EMAIL,
     subject,
-    text: textBody
+    text: textBody,
+    html: htmlStaff
   });
 }
 
@@ -680,20 +712,7 @@ app.get(
       let query = supabase
         .from('reservations')
         .select(`
-          id,
-          user_id,
-          room_id,
-          start_date,
-          end_date,
-          status,
-          total_price,
-          guest_first_name,
-          guest_last_name,
-          guest_email,
-          guest_phone,
-          created_at,
-          canceled_at,
-          canceled_by,
+          *,
           users:user_id (
             email,
             first_name,
@@ -726,6 +745,7 @@ app.get(
       // Transform data to match expected format
       const transformed = reservations?.map((r: any) => ({
         Id: r.id,
+        BookingCode: r.booking_code || null,
         UserId: r.user_id,
         RoomId: r.room_id,
         StartDate: r.start_date,
@@ -816,13 +836,7 @@ app.post(
       const { data: reservationData, error: fetchError } = await supabase
         .from('reservations')
         .select(`
-          user_id,
-          room_id,
-          start_date,
-          end_date,
-          guest_email,
-          guest_first_name,
-          guest_last_name,
+          *,
           users:user_id (
             email,
             first_name,
@@ -847,6 +861,9 @@ app.post(
         const roomName = room?.name || 'Room';
         const checkIn = new Date(reservationData.start_date).toLocaleDateString();
         const checkOut = new Date(reservationData.end_date).toLocaleDateString();
+        const bookingCode: string | null = (reservationData as any)?.booking_code || null;
+        const baseUrl = getPublicBaseUrl();
+        const brandLogo = normalizeImageUrl('/images/hotel-logo.png', baseUrl);
 
         if (userEmail && status && ['Approved', 'Rejected', 'Cancelled'].includes(status)) {
           try {
@@ -857,15 +874,48 @@ app.post(
             if (status === 'Approved') {
               subject = `Reservation Approved - ${roomName}`;
               textBody = `Dear ${userName},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been approved.\n\nWe look forward to welcoming you!\n\nBest regards,\nAurora Hotel`;
-              htmlBody = `<p>Dear ${userName},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>approved</strong>.</p><p>We look forward to welcoming you!</p><p>Best regards,<br/>Aurora Hotel</p>`;
+              htmlBody = renderBrandedEmail({
+                title: 'Reservation Approved',
+                preheader: `Your reservation for ${roomName} is approved`,
+                bookingCode,
+                logoUrl: brandLogo,
+                footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+                bodyHtml:
+                  `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(userName)},</p>` +
+                  `<p style="margin:0 0 12px 0;">Your reservation for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>approved</strong>.</p>` +
+                  `<p style="margin:0 0 12px 0;">We look forward to welcoming you!</p>` +
+                  `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+              });
             } else if (status === 'Rejected') {
               subject = `Reservation Update - ${roomName}`;
               textBody = `Dear ${userName},\n\nUnfortunately, your reservation request for ${roomName} from ${checkIn} to ${checkOut} has been rejected.\n\nPlease contact us if you have any questions or would like to make a new reservation.\n\nBest regards,\nAurora Hotel`;
-              htmlBody = `<p>Dear ${userName},</p><p>Unfortunately, your reservation request for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>rejected</strong>.</p><p>Please contact us if you have any questions or would like to make a new reservation.</p><p>Best regards,<br/>Aurora Hotel</p>`;
+              htmlBody = renderBrandedEmail({
+                title: 'Reservation Update',
+                preheader: `Your reservation for ${roomName} was rejected`,
+                bookingCode,
+                logoUrl: brandLogo,
+                footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+                bodyHtml:
+                  `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(userName)},</p>` +
+                  `<p style="margin:0 0 12px 0;">Unfortunately, your reservation request for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>rejected</strong>.</p>` +
+                  `<p style="margin:0 0 12px 0;">Please contact us if you have any questions or would like to make a new reservation.</p>` +
+                  `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+              });
             } else if (status === 'Cancelled') {
               subject = `Reservation Cancelled - ${roomName}`;
               textBody = `Dear ${userName},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been cancelled by the administration.\n\nIf you have any questions, please contact us.\n\nBest regards,\nAurora Hotel`;
-              htmlBody = `<p>Dear ${userName},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>cancelled</strong> by the administration.</p><p>If you have any questions, please contact us.</p><p>Best regards,<br/>Aurora Hotel</p>`;
+              htmlBody = renderBrandedEmail({
+                title: 'Reservation Cancelled',
+                preheader: `Your reservation for ${roomName} was cancelled`,
+                bookingCode,
+                logoUrl: brandLogo,
+                footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+                bodyHtml:
+                  `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(userName)},</p>` +
+                  `<p style="margin:0 0 12px 0;">Your reservation for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>cancelled</strong> by the administration.</p>` +
+                  `<p style="margin:0 0 12px 0;">If you have any questions, please contact us.</p>` +
+                  `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+              });
             }
 
             await mailTransporter.sendMail({
@@ -882,16 +932,10 @@ app.post(
         }
       }
       
-      // Emit real-time update to all connected clients
-      io.emit('reservation-status-updated', {
-        reservationId,
-        status,
-        reservation: updatedReservation
-      });
-
       // Transform to match expected format
       const transformed = {
         Id: updatedReservation.id,
+        BookingCode: (updatedReservation as any)?.booking_code || null,
         UserId: updatedReservation.user_id,
         RoomId: updatedReservation.room_id,
         StartDate: updatedReservation.start_date,
@@ -907,6 +951,13 @@ app.post(
         CanceledAt: updatedReservation.canceled_at,
         CanceledBy: updatedReservation.canceled_by
       };
+
+      // Emit real-time update to all connected clients (use transformed shape expected by UI)
+      io.emit('reservation-status-updated', {
+        reservationId,
+        status,
+        reservation: transformed
+      });
 
       res.json(transformed);
     } catch (error: any) {
@@ -1388,6 +1439,9 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
 
     // Try to send emails, but do not fail the reservation if email sending fails
     try {
+      const bookingCode =
+        (reservation as any)?.booking_code ||
+        (reservation?.id != null ? String(reservation.id).padStart(4, '0') : null);
       await sendReservationEmails({
         guestEmail: email!,
         guestName: `${firstName} ${lastName}`,
@@ -1395,7 +1449,8 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
         roomName: roomName || 'Room',
         roomPrice: pricePerNight ?? null,
         checkIn: start.toLocaleDateString(),
-        checkOut: end.toLocaleDateString()
+        checkOut: end.toLocaleDateString(),
+        bookingCode
       });
     } catch (mailError) {
       console.error('Failed to send reservation emails:', mailError);
@@ -1427,20 +1482,7 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
     const { data: reservations, error } = await supabase
       .from('reservations')
       .select(`
-        id,
-        room_id,
-        start_date,
-        end_date,
-        status,
-        total_price,
-        guest_first_name,
-        guest_last_name,
-        guest_email,
-        guest_phone,
-        notes,
-        created_at,
-        canceled_at,
-        canceled_by,
+        *,
         rooms:room_id (
           name,
           type,
@@ -1458,6 +1500,7 @@ app.get('/api/user/reservations', authMiddleware, async (req: AuthRequest, res):
     // Transform the data to match expected format
     const transformed = reservations?.map((r: any) => ({
       Id: r.id,
+      BookingCode: r.booking_code || null,
       RoomId: r.room_id,
       StartDate: r.start_date,
       EndDate: r.end_date,
@@ -1540,7 +1583,13 @@ app.put('/api/user/reservations/:id/cancel', authMiddleware, async (req: AuthReq
     io.emit('reservation-status-updated', {
       reservationId,
       status: 'Cancelled',
-      reservation: cancelledReservation
+      reservation: {
+        Id: cancelledReservation.id,
+        BookingCode: (cancelledReservation as any)?.booking_code || null,
+        Status: cancelledReservation.status,
+        CanceledAt: cancelledReservation.canceled_at,
+        CanceledBy: cancelledReservation.canceled_by
+      }
     });
 
     res.json(cancelledReservation);

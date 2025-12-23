@@ -1,17 +1,17 @@
 <div class="booking-container">
   <!-- Header Section - Centered -->
   <div class="booking-header">
-    <h1 class="booking-title">MAKE YOUR RESERVATION</h1>
-    <p class="booking-subtitle">Plan your perfect stay with us. Select your preferred dates and discover our available accommodations. Each room is thoughtfully designed to provide comfort and relaxation during your visit.</p>
+    <h1 class="booking-title">{{ 'booking.title' | translate }}</h1>
+    <p class="booking-subtitle">{{ 'booking.subtitle' | translate }}</p>
   </div>
 
   <!-- Search Section - Centered -->
   <div class="search-section-wrapper">
     <div class="search-section">
-      <h3 class="search-title">Select Your Dates</h3>
+      <h3 class="search-title">{{ 'booking.selectDates' | translate }}</h3>
       <div class="date-fields">
         <mat-form-field appearance="fill">
-          <mat-label>Check In</mat-label>
+          <mat-label>{{ 'booking.checkIn' | translate }}</mat-label>
           <input matInput [matDatepicker]="checkinPicker" [(ngModel)]="checkinDate" 
                  [min]="today"
                  (dateChange)="onCheckinDateChange($event.value)">
@@ -20,7 +20,7 @@
         </mat-form-field>
 
         <mat-form-field appearance="fill">
-          <mat-label>Check Out</mat-label>
+          <mat-label>{{ 'booking.checkOut' | translate }}</mat-label>
           <input matInput [matDatepicker]="checkoutPicker" [(ngModel)]="checkoutDate"
                  [min]="minCheckoutDate">
           <mat-datepicker-toggle matSuffix [for]="checkoutPicker"></mat-datepicker-toggle>
@@ -29,14 +29,14 @@
       </div>
 
       <button class="search-button" (click)="searchRooms()">
-        <i class="fas fa-search"></i> Check Availability
+        <i class="fas fa-search"></i> {{ 'booking.checkAvailability' | translate }}
       </button>
     </div>
   </div>
 
   <!-- Rooms Section -->
   <div class="rooms-section" *ngIf="searched">
-    <h2 class="rooms-title" *ngIf="rooms.length > 0">Available Accommodations</h2>
+    <h2 class="rooms-title" *ngIf="rooms.length > 0">{{ 'booking.availableAccommodations' | translate }}</h2>
     <div class="room-cards" *ngIf="rooms.length > 0">
       <div class="room-card" *ngFor="let room of rooms" [class.selected-room]="selectedRoom === room">
         <div class="room-image">
@@ -46,20 +46,20 @@
           <h3>{{ room.name }}</h3>
           <p class="room-description">{{ room.description }}</p>
           <div class="room-details">
-            <div class="room-feature"><i class="fas fa-user"></i> {{ room.capacity }} guests</div>
+            <div class="room-feature"><i class="fas fa-user"></i> {{ room.capacity }} {{ 'booking.guests' | translate }}</div>
             <div class="room-feature"><i class="fas fa-bed"></i> {{ room.beds }}</div>
-            <div class="room-feature"><i class="fas fa-bath"></i> {{ room.bathrooms }} bathroom{{ room.bathrooms > 1 ? 's' : '' }}</div>
+            <div class="room-feature"><i class="fas fa-bath"></i> {{ room.bathrooms }} {{ room.bathrooms > 1 ? ('booking.bathrooms' | translate) : ('booking.bathroom' | translate) }}</div>
           </div>
           <div class="room-price">
             <span class="price-amount">{{ room.price | appCurrency }}</span>
-            <span class="price-period">{{ currentLanguage === 'bg' ? 'на нощ' : 'per night' }}</span>
+            <span class="price-period">{{ 'booking.perNight' | translate }}</span>
           </div>
           <div class="room-actions">
             <button class="btn-reserve" (click)="selectRoom(room)">
-              <i class="fas fa-calendar-check"></i> Reserve Now
+              <i class="fas fa-calendar-check"></i> {{ 'booking.reserveNow' | translate }}
             </button>
             <button class="btn-details" (click)="openDetailsDialog(room)">
-              <i class="fas fa-info-circle"></i> View Details
+              <i class="fas fa-info-circle"></i> {{ 'booking.viewDetails' | translate }}
             </button>
           </div>
         </div>
@@ -68,8 +68,8 @@
 
     <div class="no-rooms" *ngIf="rooms.length === 0">
       <i class="fas fa-calendar-times"></i>
-      <h3>No rooms available</h3>
-      <p>We're sorry, but there are no available rooms for the selected dates. Please try selecting different dates.</p>
+      <h3>{{ 'booking.noRoomsTitle' | translate }}</h3>
+      <p>{{ 'booking.noRoomsMessage' | translate }}</p>
     </div>
   </div>
 
@@ -153,7 +153,7 @@
           <div [innerHTML]="getRoomDetailedDescription(selectedRoom)"></div>
         </div>
         <div class="form-buttons">
-          <button class="btn btn-primary" (click)="closeDetailsDialog()">Close</button>
+          <button class="btn btn-primary" (click)="closeDetailsDialog()">{{ 'booking.close' | translate }}</button>
         </div>
       </div>
     </div>

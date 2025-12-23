@@ -37,7 +37,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let r of pendingReservations">
-          <td attr.data-label="{{ translations.id || 'ID' }}">{{ r.Id }}</td>
+          <td attr.data-label="{{ translations.id || 'ID' }}">{{ formatBookingId(r) }}</td>
           <td attr.data-label="{{ translations.user || 'Name' }}">{{ (r.FirstName || r.GuestFirstName || '') + ' ' + (r.LastName || r.GuestLastName || '') }}</td>
           <td data-label="Email">{{ r.Email || r.GuestEmail }}</td>
           <td attr.data-label="{{ translations.room || 'Room' }}">{{ r.RoomName }}</td>
@@ -75,7 +75,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let r of awaitingConfirmation">
-          <td>{{ r.Id }}</td>
+          <td>{{ formatBookingId(r) }}</td>
           <td>{{ (r.FirstName || r.GuestFirstName || '') + ' ' + (r.LastName || r.GuestLastName || '') }}</td>
           <td>{{ r.Email || r.GuestEmail }}</td>
           <td>{{ r.RoomName }}</td>
@@ -181,7 +181,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let r of getPaginatedReservations()">
-          <td attr.data-label="{{ translations.id || 'ID' }}">{{ r.Id }}</td>
+          <td attr.data-label="{{ translations.id || 'ID' }}">{{ formatBookingId(r) }}</td>
           <td attr.data-label="{{ translations.user || 'Name' }}">{{ (r.FirstName || r.GuestFirstName || '') + ' ' + (r.LastName || r.GuestLastName || '') }}</td>
           <td data-label="Email">{{ r.Email || r.GuestEmail }}</td>
           <td attr.data-label="{{ translations.room || 'Room' }}">{{ r.RoomName }}</td>

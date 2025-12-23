@@ -141,6 +141,15 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
+  formatBookingId(r: any): string {
+    const code = r?.BookingCode ?? r?.booking_code ?? null;
+    if (code != null && String(code).trim() !== '') return String(code);
+    const id = Number(r?.Id ?? r?.id);
+    if (!Number.isFinite(id)) return '';
+    if (id >= 0 && id <= 9999) return String(id).padStart(4, '0');
+    return String(id);
+  }
+
   private handleReservationUpdate(update: { reservationId: number; status: string; reservation: any }): void {
     // Update pending reservations
     const pendingIndex = this.pendingReservations.findIndex(r => r.Id === update.reservationId);

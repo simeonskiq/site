@@ -17,6 +17,7 @@ import { environment } from '../../environments/environment';
 import { AuthService, User } from '../services/auth.service';
 import { AppCurrencyPipe } from '../pipes/app-currency.pipe';
 import { TranslatePipe } from '../pipes/translate.pipe';
+import { NotificationService } from '../services/notification.service';
 
 interface Room {
   id: number;
@@ -169,7 +170,8 @@ export class BookingComponent implements OnInit, OnDestroy {
     @Inject(PLATFORM_ID) platformId: Object,
     private translationService: TranslationService,
     private languageService: LanguageService,
-    private authService: AuthService
+    private authService: AuthService,
+    private notificationService: NotificationService
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
     this.today.setHours(0, 0, 0, 0);
@@ -285,13 +287,17 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   searchRooms() {
     if (!this.checkinDate || !this.checkoutDate) {
-      alert('Please select both check-in and check-out dates');
+      this.notificationService.warning('Missing dates', 'Please select both check-in and check-out dates.', { persist: false });
       return;
     }
 
     // Add additional validation to ensure checkout is after checkin
     if (this.checkoutDate <= this.checkinDate) {
-      alert('Check-out date must be at least one day after check-in date');
+      this.notificationService.warning(
+        'Invalid dates',
+        'Check-out date must be at least one day after check-in date.',
+        { persist: false }
+      );
       this.checkoutDate = null;
       return;
     }
@@ -344,7 +350,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         },
         error: (err) => {
           console.error('Failed to load available rooms', err);
-          alert('There was an error loading available rooms. Please try again.');
+          this.notificationService.error('Error', 'There was an error loading available rooms. Please try again.', { persist: false });
         }
       });
   }
@@ -407,12 +413,12 @@ export class BookingComponent implements OnInit, OnDestroy {
   confirmReservation() {
     // Email is required, phone is optional; names remain required
     if (!this.reservationData.name1 || !this.reservationData.name2 || !this.reservationData.email) {
-      alert('Please fill in first name, last name, and email');
+      this.notificationService.warning('Missing details', 'Please fill in first name, last name, and email.', { persist: false });
       return;
     }
 
     if (!this.selectedRoom) {
-      alert('Please select a room first');
+      this.notificationService.warning('No room selected', 'Please select a room first.', { persist: false });
       return;
     }
 
@@ -432,9 +438,19 @@ export class BookingComponent implements OnInit, OnDestroy {
       userId: this.currentUser?.id
     };
 
-    this.http.post(`${environment.apiUrl}/api/public/reservations`, payload).subscribe({
-      next: () => {
-        alert('Reservation confirmed! Please check your email for confirmation details.');
+    this.http.post<any>(`${environment.apiUrl}/api/public/reservations`, payload).subscribe({
+      next: (resp) => {
+        const codeRaw = resp?.reservation?.booking_code ?? resp?.reservation?.bookingCode ?? null;
+        const fallbackId = resp?.reservation?.id != null ? String(resp.reservation.id).padStart(4, '0') : null;
+        const bookingId = (codeRaw != null && String(codeRaw).trim() !== '') ? String(codeRaw) : fallbackId;
+
+        this.notificationService.success(
+          'Reservation confirmed',
+          bookingId
+            ? `Your Booking ID is ${bookingId}. Please check your email for confirmation details.`
+            : 'Please check your email for confirmation details.',
+          { persist: true, link: '/my-reservations' }
+        );
         this.showReservationForm = false;
         this.resetReservationForm();
         // After successful reservation, navigate to "My Reservations" if logged in
@@ -444,7 +460,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         console.error('Failed to create reservation:', err);
-        alert('There was an error processing your reservation. Please try again.');
+        this.notificationService.error('Reservation failed', 'There was an error processing your reservation. Please try again.', { persist: false });
       }
     });
   }
@@ -480,44 +496,22 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   getRoomDetailedDescription(room: Room): string {
-    const descriptions: { [key: string]: string } = {
-      'Апартамент 3': `Перфектен за тези, които търсят уют и спокойствие, този апартамент с една спалня съчетава комфорт и функционалност. Спалнята разполага с голямо двойно легло, а дневната зона предлага разтегателен диван, подходящ за допълнителни гости. В апартамента ще откриете още кухненски бокс с всички удобства, самостоятелна баня с вана и душ, и широка тераса с кът за отдих. Климатиците, телевизорът и безплатният Wi-Fi гарантират удобство и приятна атмосфера.<br><br>
-      ✔ Спалня с двойно легло<br>
-      ✔ Дневна зона с разтегателен диван<br>
-      ✔ Просторна тераса с кът за отдих<br>
-      ✔ Климатик и телевизор<br>
-      ✔ Кухненски бокс с фурна, хладилник и трапезна маса<br>
-      ✔ Самостоятелна тоалетна и баня с вана и душ<br>
-      ✔ Безплатен Wi-Fi`,
-
-      'Апартамент 2': `Ако търсите простор и удобство, този апартамент е за вас! Разполага с отделна спалня с двойно легло и дневна зона с разтегателен диван, където може да нощуват още двама гости. Светлината навлиза през големите прозорци, а терасата предлага чудесно място за отдих с изглед. Кухненският бокс е напълно оборудван с всичко от което бийте имали нужда, а самостоятелната баня е модерно обзавена с вана. Климатикът, телевизорът и безплатният Wi-Fi ще направят престоя ви още по-приятен.<br><br>
-      ✔ Спалня с двойно легло<br>
-      ✔ Дневна зона с разтегателен диван<br>
-      ✔ Просторна тераса с кът за отдих<br>
-      ✔ Климатик и телевизор<br>
-      ✔ Кухненски бокс с фурна, хладилник и трапезна маса<br>
-      ✔ Самостоятелна тоалетна и баня с вана и душ<br>
-      ✔ Безплатен Wi-Fi`,
-
-      'Апартамент 1': `Насладете се на комфорт и уединение в нашия Апартамент с една спалня. Основната спалня разполага с удобно двойно легло, а дневната зона е оборудвана с разтегателен диван, подходящ за допълнителни гости. Апартаментът предлага напълно оборудван кухненски бокс, където можете да приготвяте любимите си ястия, както и просторна тераса, идеална за сутрешно кафе или вечерен релакс. Освен това, разполага със самостоятелна баня, климатик, телевизор и безплатен Wi-Fi.<br><br>
-      ✔ Спалня с двойно легло<br>
-      ✔ Дневна зона с разтегателен диван<br>
-      ✔ Просторна тераса с кът за отдих<br>
-      ✔ Климатик и телевизор<br>
-      ✔ Кухненски бокс с фурна, хладилник и трапезна маса<br>
-      ✔ Самостоятелна тоалетна и баня с душ<br>
-      ✔ Безплатен Wi-Fi`,
-
-      'Студио': `Нашето Студио предлага уют и удобство с модерен интериор и тераса, където можете да се насладите на сутрешното си кафе или вечерния бриз. Основното пространство включва разтегателен диван, напълно оборудван кухненски бокс с микроволнова, хладилник и трапезна маса. В студиото ще откриете още климатик, телевизор и безплатен Wi-Fi за вашето удобство.<br><br>
-      ✔ Разтегателен диван за двама<br>
-      ✔ Просторна тераса с кът за отдих<br>
-      ✔ Самостоятелна тоалетна и баня с душ<br>
-      ✔ Климатик и телевизор<br>
-      ✔ Кухненски бокс с микроволнова, хладилник и трапезна маса<br>
-      ✔ Безплатен Wi-Fi`,
+    const roomKeyMap: { [key: string]: { desc: string, features: string } } = {
+      'Апартамент 1': { desc: 'booking.roomDescription.apart1', features: 'booking.roomDescription.apart1.features' },
+      'Апартамент 2': { desc: 'booking.roomDescription.apart2', features: 'booking.roomDescription.apart2.features' },
+      'Апартамент 3': { desc: 'booking.roomDescription.apart3', features: 'booking.roomDescription.apart3.features' },
+      'Студио': { desc: 'booking.roomDescription.studio', features: 'booking.roomDescription.studio.features' }
     };
 
-    return descriptions[room.name] || 'No detailed description available for this room.';
+    const mapping = roomKeyMap[room.name];
+    if (mapping) {
+      const lang = this.currentLanguage as 'en' | 'bg';
+      const description = this.translationService.translate(mapping.desc);
+      const features = this.translationService.translate(mapping.features);
+      return `${description}<br><br>${features}`;
+    }
+
+    return this.translationService.translate('booking.noDescription') || 'No detailed description available for this room.';
   }
 
   // Bulgarian translations for the booking component

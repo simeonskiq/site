@@ -7,6 +7,8 @@ import { TranslationService } from '../services/translation.service';
 import { TranslatePipe } from '../pipes/translate.pipe';
 import { AuthService, User } from '../services/auth.service';
 import { Subscription } from 'rxjs';
+import { NotificationService, AppNotification } from '../services/notification.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-nav-bar',
@@ -28,12 +30,17 @@ export class NavBarComponent implements OnInit, OnDestroy {
   isAdmin = false;
   showUserMenu = false;
   showMobileMenu = false;
+  showNotificationsMenu = false;
+  unreadCount = 0;
+  notifications: AppNotification[] = [];
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private languageService: LanguageService,
     private translationService: TranslationService,
-    private authService: AuthService
+    private authService: AuthService,
+    private notificationService: NotificationService,
+    private router: Router
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
   }
@@ -51,8 +58,16 @@ export class NavBarComponent implements OnInit, OnDestroy {
       this.isAdmin = !!user && (user.role ?? 'User') !== 'User';
       if (!this.isAuthenticated) {
         this.showUserMenu = false;
+        this.showNotificationsMenu = false;
       }
     });
+
+    this.authSubscription?.add(
+      this.notificationService.notifications$.subscribe((list) => {
+        this.notifications = list.slice(0, 12);
+        this.unreadCount = list.filter((n) => !n.read).length;
+      })
+    );
 
     // Initialize authentication state
     this.isAuthenticated = this.authService.isAuthenticated();
@@ -93,10 +108,41 @@ export class NavBarComponent implements OnInit, OnDestroy {
 
   toggleUserMenu(): void {
     this.showUserMenu = !this.showUserMenu;
+    if (this.showUserMenu) this.showNotificationsMenu = false;
   }
 
   closeUserMenu(): void {
     this.showUserMenu = false;
+  }
+
+  toggleNotificationsMenu(): void {
+    this.showNotificationsMenu = !this.showNotificationsMenu;
+    if (this.showNotificationsMenu) this.showUserMenu = false;
+  }
+
+  closeNotificationsMenu(): void {
+    this.showNotificationsMenu = false;
+  }
+
+  markAllNotificationsRead(): void {
+    this.notificationService.markAllRead();
+  }
+
+  clearAllNotifications(): void {
+    this.notificationService.clearAll();
+  }
+
+  removeNotification(n: AppNotification, event: Event): void {
+    event.stopPropagation(); // Prevent triggering openNotification
+    this.notificationService.remove(n.id);
+  }
+
+  openNotification(n: AppNotification): void {
+    this.notificationService.markRead(n.id);
+    this.closeNotificationsMenu();
+    if (n.link) {
+      this.router.navigateByUrl(n.link);
+    }
   }
 
   toggleMobileMenu(): void {
@@ -105,5 +151,12 @@ export class NavBarComponent implements OnInit, OnDestroy {
 
   closeMobileMenu(): void {
     this.showMobileMenu = false;
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    // Close dropdowns when clicking outside
+    this.closeUserMenu();
+    this.closeNotificationsMenu();
   }
 }

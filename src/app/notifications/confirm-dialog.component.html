@@ -1,0 +1,12 @@
+<div class="confirm-backdrop" *ngIf="open" (click)="cancel()">
+  <div class="confirm-dialog" (click)="$event.stopPropagation()">
+    <div class="confirm-title">{{ req?.title || 'Confirm' }}</div>
+    <div class="confirm-message">{{ req?.message }}</div>
+    <div class="confirm-actions">
+      <button type="button" class="btn btn-cancel" (click)="cancel()">{{ req?.cancelText || 'Cancel' }}</button>
+      <button type="button" class="btn btn-confirm" (click)="confirm()">{{ req?.confirmText || 'Yes' }}</button>
+    </div>
+  </div>
+</div>
+
+

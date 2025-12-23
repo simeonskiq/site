@@ -11,6 +11,7 @@ import { getDbConnection } from './server/db.config.js';
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
 import nodemailer from 'nodemailer';
+import { renderBrandedEmail, escapeHtml } from './server/email-template.js';
 
 const serverDistFolder = dirname(fileURLToPath(import.meta.url));
 const browserDistFolder = resolve(serverDistFolder, '../browser');
@@ -113,17 +114,11 @@ async function sendReservationEmails(options: {
         <td align="center" style="padding:24px 16px;">
           <table role="presentation" cellpadding="0" cellspacing="0" width="640" style="max-width:640px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e7eb;">
             <tr>
-              <td style="padding:20px 22px;border-bottom:1px solid #eef2f7;">
-                <table role="presentation" width="100%" style="border-collapse:collapse;">
-                  <tr>
-                    <td>
-                      ${brandLogo ? `<img src="${brandLogo}" alt="Aurora Hotel" height="42" style="display:block;border:0;outline:none;">` : `<div style="font-weight:800;font-size:18px;">Aurora Hotel</div>`}
-                    </td>
-                    <td align="right" style="color:#6b7280;font-size:12px;">
-                      Confirmation: <span style="font-weight:700;color:#d97706;">${conf}</span>
-                    </td>
-                  </tr>
-                </table>
+              <td align="center" style="padding:26px 22px 18px 22px;border-bottom:1px solid #eef2f7;">
+                ${brandLogo ? `<img src="${brandLogo}" alt="Aurora Hotel" height="78" style="display:block;border:0;outline:none;margin:0 auto;">` : `<div style="font-weight:900;font-size:22px;">Aurora Hotel</div>`}
+                <div style="margin-top:10px;color:#6b7280;font-size:12px;">
+                  Booking ID: <span style="font-weight:800;color:#d97706;letter-spacing:1px;">${conf}</span>
+                </div>
               </td>
             </tr>
 
@@ -217,6 +212,25 @@ async function sendReservationEmails(options: {
       `Check-in: ${checkIn}\n` +
       `Check-out: ${checkOut}\n` +
       (noteText ? `\nSpecial Requests: ${noteText}\n` : '')
+    ,
+    html: renderBrandedEmail({
+      title: 'New reservation request',
+      preheader: `New reservation request for ${roomName}`,
+      bookingCode: conf,
+      logoUrl: brandLogo,
+      footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+      bodyHtml:
+        `<table role="presentation" width="100%" style="border-collapse:collapse;margin-top:6px;">` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Guest</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestName)}</td></tr>` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Email</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestEmail)}</td></tr>` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Phone</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(guestPhone || 'Not provided')}</td></tr>` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Room</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(roomName)}</td></tr>` +
+        `<tr><td style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;font-weight:800;">Dates</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef2f7;color:#111827;">${escapeHtml(checkIn)} – ${escapeHtml(checkOut)}</td></tr>` +
+        `<tr><td style="padding:10px 0;color:#111827;font-weight:800;">Amount</td><td align="right" style="padding:10px 0;color:#111827;">${escapeHtml(String(amount))}</td></tr>` +
+        `</table>` +
+        `<div style="margin-top:14px;color:#111827;font-weight:800;">Special Requests</div>` +
+        `<div style="margin-top:6px;color:#374151;">${noteText ? escapeHtml(noteText) : '<span style="color:#9ca3af;">None</span>'}</div>`
+    })
   });
 }
 
@@ -227,6 +241,7 @@ async function sendReservationStatusEmail(options: {
   checkIn: string;
   checkOut: string;
   status: 'Approved' | 'Rejected' | 'Cancelled' | 'Completed';
+  bookingCode?: string | null;
 }) {
   if (!mailTransporter) {
     throw new Error('Email not configured: set SMTP_USER and SMTP_PASS (and SMTP_HOST/SMTP_PORT if not using Gmail).');
@@ -235,7 +250,12 @@ async function sendReservationStatusEmail(options: {
     throw new Error('Email not configured: set HOTEL_EMAIL (or SMTP_USER).');
   }
 
-  const { to, name, roomName, checkIn, checkOut, status } = options;
+  const { to, name, roomName, checkIn, checkOut, status, bookingCode } = options;
+
+  const baseUrl =
+    process.env['PUBLIC_SITE_URL'] ||
+    (process.env['VERCEL_URL'] ? `https://${process.env['VERCEL_URL']}` : '');
+  const brandLogo = baseUrl ? `${baseUrl}/images/hotel-logo.png` : '/images/hotel-logo.png';
 
   let subject = '';
   let textBody = '';
@@ -244,19 +264,63 @@ async function sendReservationStatusEmail(options: {
   if (status === 'Approved') {
     subject = `Reservation Approved - ${roomName}`;
     textBody = `Dear ${name},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been approved.\n\nWe look forward to welcoming you!\n\nBest regards,\nAurora Hotel`;
-    htmlBody = `<p>Dear ${name},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>approved</strong>.</p><p>We look forward to welcoming you!</p><p>Best regards,<br/>Aurora Hotel</p>`;
+    htmlBody = renderBrandedEmail({
+      title: 'Reservation Approved',
+      preheader: `Your reservation for ${roomName} is approved`,
+      bookingCode: bookingCode || null,
+      logoUrl: brandLogo,
+      footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+      bodyHtml:
+        `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(name)},</p>` +
+        `<p style="margin:0 0 12px 0;">Your reservation for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>approved</strong>.</p>` +
+        `<p style="margin:0 0 12px 0;">We look forward to welcoming you!</p>` +
+        `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+    });
   } else if (status === 'Rejected') {
     subject = `Reservation Update - ${roomName}`;
     textBody = `Dear ${name},\n\nUnfortunately, your reservation request for ${roomName} from ${checkIn} to ${checkOut} has been rejected.\n\nPlease contact us if you have any questions or would like to make a new reservation.\n\nBest regards,\nAurora Hotel`;
-    htmlBody = `<p>Dear ${name},</p><p>Unfortunately, your reservation request for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>rejected</strong>.</p><p>Please contact us if you have any questions or would like to make a new reservation.</p><p>Best regards,<br/>Aurora Hotel</p>`;
+    htmlBody = renderBrandedEmail({
+      title: 'Reservation Update',
+      preheader: `Your reservation for ${roomName} was rejected`,
+      bookingCode: bookingCode || null,
+      logoUrl: brandLogo,
+      footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+      bodyHtml:
+        `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(name)},</p>` +
+        `<p style="margin:0 0 12px 0;">Unfortunately, your reservation request for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>rejected</strong>.</p>` +
+        `<p style="margin:0 0 12px 0;">Please contact us if you have any questions or would like to make a new reservation.</p>` +
+        `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+    });
   } else if (status === 'Cancelled') {
     subject = `Reservation Cancelled - ${roomName}`;
     textBody = `Dear ${name},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been cancelled by the administration.\n\nIf you have any questions, please contact us.\n\nBest regards,\nAurora Hotel`;
-    htmlBody = `<p>Dear ${name},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been <strong>cancelled</strong> by the administration.</p><p>If you have any questions, please contact us.</p><p>Best regards,<br/>Aurora Hotel</p>`;
+    htmlBody = renderBrandedEmail({
+      title: 'Reservation Cancelled',
+      preheader: `Your reservation for ${roomName} was cancelled`,
+      bookingCode: bookingCode || null,
+      logoUrl: brandLogo,
+      footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+      bodyHtml:
+        `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(name)},</p>` +
+        `<p style="margin:0 0 12px 0;">Your reservation for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been <strong>cancelled</strong> by the administration.</p>` +
+        `<p style="margin:0 0 12px 0;">If you have any questions, please contact us.</p>` +
+        `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+    });
   } else if (status === 'Completed') {
     subject = `Reservation Completed - ${roomName}`;
     textBody = `Dear ${name},\n\nYour reservation for ${roomName} from ${checkIn} to ${checkOut} has been marked as completed.\n\nThank you for staying with us!\n\nBest regards,\nAurora Hotel`;
-    htmlBody = `<p>Dear ${name},</p><p>Your reservation for <strong>${roomName}</strong> from <strong>${checkIn}</strong> to <strong>${checkOut}</strong> has been marked as <strong>completed</strong>.</p><p>Thank you for staying with us!</p><p>Best regards,<br/>Aurora Hotel</p>`;
+    htmlBody = renderBrandedEmail({
+      title: 'Reservation Completed',
+      preheader: `Your reservation for ${roomName} is completed`,
+      bookingCode: bookingCode || null,
+      logoUrl: brandLogo,
+      footerText: `Aurora Hotel • ${HOTEL_EMAIL}`,
+      bodyHtml:
+        `<p style="margin:0 0 12px 0;">Dear ${escapeHtml(name)},</p>` +
+        `<p style="margin:0 0 12px 0;">Your reservation for <strong>${escapeHtml(roomName)}</strong> from <strong>${escapeHtml(checkIn)}</strong> to <strong>${escapeHtml(checkOut)}</strong> has been marked as <strong>completed</strong>.</p>` +
+        `<p style="margin:0 0 12px 0;">Thank you for staying with us!</p>` +
+        `<p style="margin:0;">Best regards,<br/>Aurora Hotel</p>`
+    });
   }
 
   await mailTransporter.sendMail({
@@ -1138,7 +1202,9 @@ app.post('/api/public/reservations', async (req, res): Promise<void> => {
         checkIn,
         checkOut,
         customerNote: finalNote,
-        confirmationNumber: reservation?.id ? `R-${reservation.id}` : null
+        confirmationNumber:
+          (reservation as any)?.booking_code ||
+          (reservation?.id != null ? String(reservation.id).padStart(4, '0') : null)
       });
     } catch (mailError) {
       console.error('Failed to send reservation emails:', mailError);
@@ -1509,7 +1575,10 @@ app.post(
               roomName: room?.name || 'Room',
               checkIn: new Date(updatedReservation.start_date).toLocaleDateString(),
               checkOut: new Date(updatedReservation.end_date).toLocaleDateString(),
-              status: status as any
+              status: status as any,
+              bookingCode:
+                (updatedReservation as any)?.booking_code ||
+                (updatedReservation?.id != null ? String(updatedReservation.id).padStart(4, '0') : null)
             });
           }
         } catch (mailErr) {

@@ -10,6 +10,8 @@ import { TranslationService } from '../services/translation.service';
 import { LanguageService } from '../services/language.service';
 import { Subscription } from 'rxjs';
 import { AppCurrencyPipe } from '../pipes/app-currency.pipe';
+import { NotificationService } from '../services/notification.service';
+import { ConfirmDialogService } from '../notifications/confirm-dialog.service';
 
 @Component({
   selector: 'app-my-reservations',
@@ -38,7 +40,9 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
     private router: Router,
     private websocketService: WebSocketService,
     private translationService: TranslationService,
-    private languageService: LanguageService
+    private languageService: LanguageService,
+    private notificationService: NotificationService,
+    private confirmDialogService: ConfirmDialogService
   ) {}
 
   ngOnInit(): void {
@@ -97,6 +101,15 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+  }
+
+  formatBookingId(r: any): string {
+    const code = r?.BookingCode ?? r?.booking_code ?? null;
+    if (code != null && String(code).trim() !== '') return String(code);
+    const id = Number(r?.Id ?? r?.id);
+    if (!Number.isFinite(id)) return '';
+    if (id >= 0 && id <= 9999) return String(id).padStart(4, '0');
+    return String(id);
   }
 
   private handleReservationUpdate(update: { reservationId: number; status: string; reservation: any }): void {
@@ -185,15 +198,19 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
     this.searchTags = '';
   }
 
-  cancelReservation(reservationId: number): void {
-    if (!confirm('Are you sure you want to cancel this reservation?')) {
-      return;
-    }
+  async cancelReservation(reservationId: number): Promise<void> {
+    const ok = await this.confirmDialogService.confirm('Are you sure you want to cancel this reservation?', {
+      title: 'Cancel reservation',
+      confirmText: 'Cancel reservation',
+      cancelText: 'Keep it'
+    });
+    if (!ok) return;
 
     this.loading = true;
     this.error = null;
     this.http.put<any>(`${environment.apiUrl}/api/user/reservations/${reservationId}/cancel`, {}).subscribe({
       next: () => {
+        this.notificationService.success('Cancelled', 'Your reservation was cancelled.', { persist: true, link: '/my-reservations' });
         // Real-time update will be handled by WebSocket
         if (!this.websocketService.isConnected()) {
           this.loadReservations();
@@ -203,6 +220,7 @@ export class MyReservationsComponent implements OnInit, OnDestroy {
         console.error(err);
         this.error = err.error?.error || 'Failed to cancel reservation';
         this.loading = false;
+        this.notificationService.error('Cancel failed', this.error || 'Failed to cancel reservation', { persist: false });
       }
     });
   }
