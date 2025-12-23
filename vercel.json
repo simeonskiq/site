@@ -4,8 +4,13 @@
   "framework": null,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/"
     }
-  ]
+  ],
+  "functions": {
+    "dist/site/server/server.mjs": {
+      "runtime": "nodejs20.x"
+    }
+  }
 }

@@ -18,12 +18,14 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 // CORS middleware for API routes
+// Enhanced CORS configuration per article recommendations
 app.use((req, res, next): void => {
   // Only apply CORS to API routes
   if (req.path.startsWith('/api/')) {
+    res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, DELETE, PATCH, POST, PUT, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization, Origin');
     
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
