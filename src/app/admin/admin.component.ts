@@ -19,6 +19,7 @@ import { Subscription } from 'rxjs';
 export class AdminComponent implements OnInit, OnDestroy {
   summary: AdminDashboardSummary | null = null;
   pendingReservations: any[] = [];
+  awaitingConfirmation: any[] = [];
   allReservations: any[] = [];
   filteredReservations: any[] = [];
   rooms: any[] = [];
@@ -64,6 +65,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.isAuthorized = true;
     this.loadDashboard();
     this.loadPendingReservations();
+    this.loadAwaitingConfirmation();
     this.loadAllReservations();
     this.loadRooms();
     
@@ -160,6 +162,18 @@ export class AdminComponent implements OnInit, OnDestroy {
       this.allReservations.unshift(update.reservation);
     }
 
+    // Awaiting confirmation section (Approved -> show; Completed/Cancelled -> remove)
+    const awaitingIndex = this.awaitingConfirmation.findIndex(r => r.Id === update.reservationId);
+    if (update.status === 'Approved') {
+      if (awaitingIndex !== -1) {
+        this.awaitingConfirmation[awaitingIndex] = { ...this.awaitingConfirmation[awaitingIndex], ...update.reservation };
+      } else {
+        this.awaitingConfirmation.unshift(update.reservation);
+      }
+    } else if (awaitingIndex !== -1) {
+      this.awaitingConfirmation = this.awaitingConfirmation.filter(r => r.Id !== update.reservationId);
+    }
+
     // Reapply filters after update
     this.applyFilters();
 
@@ -197,6 +211,18 @@ export class AdminComponent implements OnInit, OnDestroy {
         console.error(err);
         this.error = 'Failed to load reservations';
         this.loading = false;
+      }
+    });
+  }
+
+  loadAwaitingConfirmation(): void {
+    this.adminService.getReservations({ status: 'Approved' }).subscribe({
+      next: (data) => {
+        this.awaitingConfirmation = data;
+      },
+      error: (err) => {
+        console.error(err);
+        // Don't block the page if this fails
       }
     });
   }
@@ -259,17 +285,23 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.updatePagination();
   }
 
+  // History is only non-active statuses; actions are handled in Pending + Awaiting Confirmation sections.
+  getPaginatedReservations(): any[] {
+    const history = this.filteredReservations.filter(r =>
+      r.Status === 'Cancelled' || r.Status === 'Rejected' || r.Status === 'Completed'
+    );
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return history.slice(start, start + this.itemsPerPage);
+  }
+
   updatePagination(): void {
-    this.totalPages = Math.ceil(this.filteredReservations.length / this.itemsPerPage);
+    const historyCount = this.filteredReservations.filter(r =>
+      r.Status === 'Cancelled' || r.Status === 'Rejected' || r.Status === 'Completed'
+    ).length;
+    this.totalPages = Math.ceil(historyCount / this.itemsPerPage);
     if (this.currentPage > this.totalPages && this.totalPages > 0) {
       this.currentPage = this.totalPages;
     }
-  }
-
-  getPaginatedReservations(): any[] {
-    const start = (this.currentPage - 1) * this.itemsPerPage;
-    const end = start + this.itemsPerPage;
-    return this.filteredReservations.slice(start, end);
   }
 
   goToPage(page: number): void {

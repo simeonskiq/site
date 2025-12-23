@@ -27,7 +27,8 @@
       <thead>
         <tr>
           <th>{{ translations.id || 'ID' }}</th>
-          <th>{{ translations.user || 'User' }}</th>
+          <th>{{ translations.user || 'Name' }}</th>
+          <th>Email</th>
           <th>{{ translations.room || 'Room' }}</th>
           <th>{{ translations.dates || 'Dates' }}</th>
           <th>{{ translations.status || 'Status' }}</th>
@@ -37,7 +38,8 @@
       <tbody>
         <tr *ngFor="let r of pendingReservations">
           <td attr.data-label="{{ translations.id || 'ID' }}">{{ r.Id }}</td>
-          <td attr.data-label="{{ translations.user || 'User' }}">{{ r.Email }}</td>
+          <td attr.data-label="{{ translations.user || 'Name' }}">{{ (r.FirstName || r.GuestFirstName || '') + ' ' + (r.LastName || r.GuestLastName || '') }}</td>
+          <td data-label="Email">{{ r.Email || r.GuestEmail }}</td>
           <td attr.data-label="{{ translations.room || 'Room' }}">{{ r.RoomName }}</td>
           <td attr.data-label="{{ translations.dates || 'Dates' }}">{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
           <td attr.data-label="{{ translations.status || 'Status' }}">
@@ -55,6 +57,38 @@
       </tbody>
     </table>
     <p *ngIf="!loading && !pendingReservations.length">{{ translations.noPending || 'No pending reservations.' }}</p>
+  </section>
+
+  <section class="section">
+    <h2>Awaiting confirmation</h2>
+    <table *ngIf="awaitingConfirmation.length" class="table">
+      <thead>
+        <tr>
+          <th>{{ translations.id || 'ID' }}</th>
+          <th>{{ translations.user || 'Name' }}</th>
+          <th>Email</th>
+          <th>{{ translations.room || 'Room' }}</th>
+          <th>{{ translations.dates || 'Dates' }}</th>
+          <th>{{ translations.status || 'Status' }}</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let r of awaitingConfirmation">
+          <td>{{ r.Id }}</td>
+          <td>{{ (r.FirstName || r.GuestFirstName || '') + ' ' + (r.LastName || r.GuestLastName || '') }}</td>
+          <td>{{ r.Email || r.GuestEmail }}</td>
+          <td>{{ r.RoomName }}</td>
+          <td>{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
+          <td>{{ r.DisplayStatus || r.Status }}</td>
+          <td>
+            <button class="btn btn-cancel" (click)="changeStatus(r.Id, 'Cancelled')">{{ translations.cancel || 'Cancel' }}</button>
+            <button class="btn btn-complete" (click)="changeStatus(r.Id, 'Completed')">{{ translations.complete || 'Complete' }}</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="!awaitingConfirmation.length">No approved reservations awaiting confirmation.</p>
   </section>
 
   <section class="section">
@@ -138,26 +172,21 @@
       <thead>
         <tr>
           <th>{{ translations.id || 'ID' }}</th>
-          <th>{{ translations.userGuest || 'User / Guest' }}</th>
+          <th>{{ translations.user || 'Name' }}</th>
+          <th>Email</th>
           <th>{{ translations.room || 'Room' }}</th>
           <th>{{ translations.dates || 'Dates' }}</th>
           <th>{{ translations.status || 'Status' }}</th>
-          <th>{{ translations.actions || 'Actions' }}</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let r of getPaginatedReservations()">
           <td attr.data-label="{{ translations.id || 'ID' }}">{{ r.Id }}</td>
-          <td attr.data-label="{{ translations.userGuest || 'User / Guest' }}">{{ r.Email || (r.GuestFirstName + ' ' + r.GuestLastName) }}</td>
+          <td attr.data-label="{{ translations.user || 'Name' }}">{{ (r.FirstName || r.GuestFirstName || '') + ' ' + (r.LastName || r.GuestLastName || '') }}</td>
+          <td data-label="Email">{{ r.Email || r.GuestEmail }}</td>
           <td attr.data-label="{{ translations.room || 'Room' }}">{{ r.RoomName }}</td>
           <td attr.data-label="{{ translations.dates || 'Dates' }}">{{ r.StartDate | date }} – {{ r.EndDate | date }}</td>
           <td attr.data-label="{{ translations.status || 'Status' }}">{{ r.DisplayStatus || r.Status }}</td>
-          <td attr.data-label="{{ translations.actions || 'Actions' }}">
-            <button class="btn btn-approve" (click)="changeStatus(r.Id, 'Approved')">{{ translations.approve || 'Approve' }}</button>
-            <button class="btn btn-reject" (click)="changeStatus(r.Id, 'Rejected')">{{ translations.reject || 'Reject' }}</button>
-            <button class="btn btn-cancel" (click)="changeStatus(r.Id, 'Cancelled')">{{ translations.cancel || 'Cancel' }}</button>
-            <button class="btn btn-complete" (click)="changeStatus(r.Id, 'Completed')">{{ translations.complete || 'Complete' }}</button>
-          </td>
         </tr>
       </tbody>
     </table>

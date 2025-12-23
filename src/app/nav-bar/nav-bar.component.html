@@ -20,7 +20,7 @@
       <a routerLink="/booking" routerLinkActive="active" (click)="closeMobileMenu()">{{ 'nav.booking' | translate }}</a>
       <a routerLink="/contact" routerLinkActive="active" (click)="closeMobileMenu()">{{ 'nav.contact' | translate }}</a>
     </div>
-    <div class="auth-links">
+    <div class="auth-links" *ngIf="isBrowser">
       <ng-container *ngIf="!isAuthenticated">
         <a routerLink="/login" routerLinkActive="active" class="auth-link">{{ 'nav.signIn' | translate }}</a>
         <a routerLink="/register" routerLinkActive="active" class="auth-link auth-link-primary">{{ 'nav.register' | translate }}</a>
@@ -87,12 +87,12 @@
       
       <div class="mobile-menu-divider"></div>
       
-      <ng-container *ngIf="!isAuthenticated">
+      <ng-container *ngIf="isBrowser && !isAuthenticated">
         <a routerLink="/login" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-auth-link">{{ 'nav.signIn' | translate }}</a>
         <a routerLink="/register" routerLinkActive="active" (click)="closeMobileMenu()" class="mobile-auth-link mobile-auth-primary">{{ 'nav.register' | translate }}</a>
       </ng-container>
       
-      <ng-container *ngIf="isAuthenticated">
+      <ng-container *ngIf="isBrowser && isAuthenticated">
         <button *ngIf="isAdmin" class="mobile-menu-item" type="button" routerLink="/admin" (click)="closeMobileMenu()">
           Admin Panel
         </button>

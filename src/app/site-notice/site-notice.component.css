@@ -1,0 +1,75 @@
+.notice-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.notice-card {
+  width: min(980px, calc(100vw - 32px));
+  background: rgba(20, 20, 20, 0.92);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+}
+
+.notice-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.notice-body {
+  opacity: 0.9;
+  font-size: 0.92rem;
+  line-height: 1.25rem;
+}
+
+.notice-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btn {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #ffffff;
+  color: #111;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .notice-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .notice-actions {
+    width: 100%;
+  }
+  .btn {
+    width: 100%;
+  }
+}
+
+

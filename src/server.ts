@@ -1269,18 +1269,25 @@ app.post(
         if (updateError) throw updateError;
         updatedReservation = data;
       } catch (err: any) {
-        // If completed_at column doesn't exist yet, retry without it.
-        if (status === 'Completed' && err?.code === '42703' && String(err?.message || '').includes('completed_at')) {
-          const retryData = { ...updateData };
-          delete retryData.completed_at;
-          const { data, error: updateError } = await supabase
-            .from('reservations')
-            .update(retryData)
-            .eq('id', reservationId)
-            .select()
-            .single();
-          if (updateError) throw updateError;
-          updatedReservation = data;
+        // If a column doesn't exist (e.g., completed_at / updated_at), retry without that field.
+        const msg = String(err?.message || err?.details || '');
+        if (err?.code === '42703' && msg.includes('does not exist')) {
+          const m = msg.match(/column\s+reservations\.([a-zA-Z0-9_]+)\s+does\s+not\s+exist/i);
+          const missing = m?.[1];
+          if (missing && Object.prototype.hasOwnProperty.call(updateData, missing)) {
+            const retryData = { ...updateData };
+            delete retryData[missing];
+            const { data, error: updateError } = await supabase
+              .from('reservations')
+              .update(retryData)
+              .eq('id', reservationId)
+              .select()
+              .single();
+            if (updateError) throw updateError;
+            updatedReservation = data;
+          } else {
+            throw err;
+          }
         } else {
           throw err;
         }
@@ -1363,7 +1370,11 @@ app.post(
       console.error('Update reservation status error:', error);
       res
         .status(500)
-        .json({ error: 'Failed to update reservation status', details: error.message });
+        .json({
+          error: 'Failed to update reservation status',
+          code: error?.code,
+          details: error?.message || error?.details || String(error)
+        });
     }
   }
 );

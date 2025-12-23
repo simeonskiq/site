@@ -19,7 +19,8 @@ export class NavBarComponent implements OnInit, OnDestroy {
   private lastScrollPosition = 0;
   isNavbarVisible = true;
   currentLang: 'bg' | 'en' = 'en'; // Default language is English
-  private isBrowser: boolean;
+  // SSR can't read localStorage, so auth UI must be rendered only in the browser
+  isBrowser = false;
   private langSubscription: Subscription | null = null;
   private authSubscription: Subscription | null = null;
   isAuthenticated = false;

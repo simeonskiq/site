@@ -1,0 +1,16 @@
+<div class="notice-wrap" *ngIf="isBrowser && isVisible">
+  <div class="notice-card">
+    <div class="notice-text">
+      <div class="notice-title">Privacy preferences</div>
+      <div class="notice-body">
+        This site stores small pieces of browser data to keep you signed in and improve the experience.
+      </div>
+    </div>
+    <div class="notice-actions">
+      <button type="button" class="btn btn-secondary" (click)="choose('decline')">Not now</button>
+      <button type="button" class="btn btn-primary" (click)="choose('accept')">OK</button>
+    </div>
+  </div>
+</div>
+
+
