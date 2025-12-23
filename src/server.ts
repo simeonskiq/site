@@ -1271,23 +1271,35 @@ app.post(
       } catch (err: any) {
         // If a column doesn't exist (e.g., completed_at / updated_at), retry without that field.
         const msg = String(err?.message || err?.details || '');
-        if (err?.code === '42703' && msg.includes('does not exist')) {
-          const m = msg.match(/column\s+reservations\.([a-zA-Z0-9_]+)\s+does\s+not\s+exist/i);
-          const missing = m?.[1];
-          if (missing && Object.prototype.hasOwnProperty.call(updateData, missing)) {
-            const retryData = { ...updateData };
-            delete retryData[missing];
-            const { data, error: updateError } = await supabase
-              .from('reservations')
-              .update(retryData)
-              .eq('id', reservationId)
-              .select()
-              .single();
-            if (updateError) throw updateError;
-            updatedReservation = data;
-          } else {
-            throw err;
-          }
+
+        // Postgres: "column reservations.completed_at does not exist" (code 42703)
+        // PostgREST schema cache: "Could not find the 'completed_at' column of 'reservations' in the schema cache" (code PGRST204)
+        const isMissingColumn =
+          err?.code === '42703' ||
+          err?.code === 'PGRST204' ||
+          msg.includes('does not exist') ||
+          msg.includes('Could not find');
+
+        if (!isMissingColumn) throw err;
+
+        let missing: string | undefined;
+        const pgMatch = msg.match(/column\s+reservations\.([a-zA-Z0-9_]+)\s+does\s+not\s+exist/i);
+        if (pgMatch?.[1]) missing = pgMatch[1];
+
+        const pgrstMatch = msg.match(/Could not find the '([a-zA-Z0-9_]+)' column of 'reservations'/i);
+        if (!missing && pgrstMatch?.[1]) missing = pgrstMatch[1];
+
+        if (missing && Object.prototype.hasOwnProperty.call(updateData, missing)) {
+          const retryData = { ...updateData };
+          delete retryData[missing];
+          const { data, error: updateError } = await supabase
+            .from('reservations')
+            .update(retryData)
+            .eq('id', reservationId)
+            .select()
+            .single();
+          if (updateError) throw updateError;
+          updatedReservation = data;
         } else {
           throw err;
         }
