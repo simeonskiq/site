@@ -9,6 +9,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/api/[...path]?p=$1"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/"
     }

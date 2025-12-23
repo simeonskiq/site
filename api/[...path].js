@@ -2,10 +2,20 @@ let cached;
 
 module.exports = async (req, res) => {
   try {
-    // In some Vercel runtimes the catch-all function receives req.url without the "/api" prefix.
-    // Your Express routes are mounted under "/api/*", so normalize here to avoid false 404s.
-    if (typeof req.url === "string" && !req.url.startsWith("/api/")) {
-      req.url = req.url.startsWith("/") ? `/api${req.url}` : `/api/${req.url}`;
+
+    if (typeof req.url === "string") {
+      const u = new URL(req.url, "http://localhost");
+      const p = u.searchParams.get("p");
+      if (p) {
+        u.searchParams.delete("p");
+        const cleaned = p.startsWith("/") ? p.slice(1) : p;
+        const nextPath = `/api/${cleaned}`;
+        req.url = u.searchParams.toString()
+          ? `${nextPath}?${u.searchParams.toString()}`
+          : nextPath;
+      } else if (!req.url.startsWith("/api/")) {
+        req.url = req.url.startsWith("/") ? `/api${req.url}` : `/api/${req.url}`;
+      }
     }
 
     if (!cached) {
